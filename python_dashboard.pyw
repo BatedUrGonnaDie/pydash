@@ -13,7 +13,11 @@ import configuration    as config
 
 class Dashboard(QMainWindow, Ui_pdt):
 
-    
+    auth_set    = Signal(str)
+    nick_set    = Signal(str)
+    title_set   = Signal(str)
+    game_set    = Signal(str)
+    status_set  = Signal(str)
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
@@ -41,6 +45,11 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.send_message.clicked.connect(self.message_send)
 
+        self.auth_set.connect(self.set_auth_text)
+        self.nick_set.connect(self.set_nick_text)
+        self.title_set.connect(self.set_title_text)
+        self.game_set.connect(self.set_game_text)
+        self.status_set.connect(self.set_status_text)
 
         self.user_config = self.configure.load_file()
         
@@ -50,8 +59,10 @@ class Dashboard(QMainWindow, Ui_pdt):
         auto_minute.start()
 
         if self.user_config["oauth"] != "":
-            self.auth_input.setText(self.user_config["oauth"])
-            self.check_code()
+            self.auth_set.emit(self.user_config["oauth"])
+            checker = threading.Thread(target = self.check_code)
+            checker.daemon = True
+            checker.start()
 
     def check_code(self):
         if not self.authorized:
@@ -63,21 +74,39 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.authorized = True
                 self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                 self.user_config = self.configure.set_param("oauth", oauth)
-                self.nick.setText(info["token"]["user_name"])
-                self.api_worker.channel = self.nick.text()
+                self.nick_set.emit(info["token"]["user_name"])
+                self.api_worker.channel = self.user_config["channel"]
                 self.auth_input.setReadOnly(True)
                 self.refresh_gt()
                 self.partner = self.api_worker.check_partner_status()
-
-    def set_chat_worker(self):
-        pass
+                self.status_set.emit("Authenticated | Partner : " + str(self.partner))
 
     def connect_to_chat(self):
         if self.authorized:
-            nick = self.nick.text()
-            oauth = self.api_worker.oauth_token
+            if self.chat_connected:
+                self.chat_connected = False
+            else:
+                nick = self.nick.text()
+                oauth = self.api_worker.oauth_token
+                self.chat_worker = twitch.Chat(nick, oauth)
+                self.chat_connected = True
 
-            #chat stuff
+                #chat stuff
+
+    def set_auth_text(self, text):
+        self.auth_input.setText(text)
+
+    def set_nick_text(self, text):
+        self.nick.setText(text)
+
+    def set_title_text(self, text):
+        self.title.setPlainText(text)
+
+    def set_game_text(self, text):
+        self.game.setText(text)
+
+    def set_status_text(self, text):
+        self.statusBar.showMessage(text)
         
     def ad_click(self):
         if self.authorized and self.partner:
@@ -95,8 +124,9 @@ class Dashboard(QMainWindow, Ui_pdt):
         if self.authorized:
             title, game = self.api_worker.get_gt()
             if title and game:
-                self.title.setPlainText(title)
-                self.game.setText(game)
+                print game
+                self.title_set.emit(title)
+                self.game_set.emit(game)
             else:
                 #status
                 pass

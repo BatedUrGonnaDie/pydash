@@ -49,12 +49,14 @@ class API:
         url = self.base_url + endpoint
         print url
         print data
+
         if method == "get":
             info = requests.get(url, headers = self.headers)
         elif method == "post":
             info = requests.post(url ,headers = self.headers, data = data)
         elif method == "put":
-            info = requests.put(url, headers = self.headers, data = data)
+            params = {'channel' : {'status':'status', 'game':'game'}}
+            info = requests.put(url, headers = self.headers, params = params)
         else:
             return -1
 
@@ -72,7 +74,7 @@ class API:
 
     def set_gt(self, title, game):
         endpoint = "/channels/" + self.channel
-        new_info = {"channel" : {"status" : title, "game" : game}}
+        new_info = {u"channel" : {u"status" : title, u"game" : game}}
         return_info = self.api_call("put", endpoint, new_info)
         print return_info
         return True if return_info else False
@@ -95,7 +97,6 @@ class API:
 class Chat:
 
     def __init__(self, name, oauth):
-
         self.name = name
         self.oauth = oauth
 
