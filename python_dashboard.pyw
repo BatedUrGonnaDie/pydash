@@ -43,18 +43,21 @@ class Dashboard(QMainWindow, Ui_pdt):
 
 
         self.user_config = self.configure.load_file()
-        if self.user_config["oauth"] != "":
-            self.auth_input.setText(self.user_config["oauth"])
-            self.check_code()
+        
 
         auto_minute = threading.Thread(target = self.minute_loop)
         auto_minute.daemon = True
         auto_minute.start()
 
+        if self.user_config["oauth"] != "":
+            self.auth_input.setText(self.user_config["oauth"])
+            self.check_code()
+
     def check_code(self):
         if not self.authorized:
             oauth = self.auth_input.text()
             self.api_worker = twitch.API(oauth)
+            self.api_worker.set_headers(oauth)
             info = self.api_worker.check_auth_status()
             if info:
                 self.authorized = True
@@ -112,6 +115,8 @@ class Dashboard(QMainWindow, Ui_pdt):
                         self.viewer_number.display(viewers)
                         if viewers > self.user_config["max_viewers"]:
                             self.user_config = self.configure.set_param("max_viewers", viewers)
+                    else:
+                        self.viewer_number.display(0)
             time.sleep(60)
 
 
