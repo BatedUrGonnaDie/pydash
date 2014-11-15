@@ -26,7 +26,6 @@ class API:
         if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
             return info
         else:
-            #status thing
             return False
 
     def check_partner_status(self):
@@ -38,30 +37,25 @@ class API:
             return False
 
     def json_decode(self, json_object):
-        # if json_object.status_code == 200:
-        #     json_decode = json_object.json()
-        #     return json_decode
-        # else:
-        #     return False
-        return json_object.json()
+        if json_object.status_code == 200:
+            json_decode = json_object.json()
+            return json_decode
+        else:
+            return False
 
     def api_call(self, method, endpoint, data = None):
         url = self.base_url + endpoint
-        print url
-        print data
 
         if method == "get":
             info = requests.get(url, headers = self.headers)
         elif method == "post":
             info = requests.post(url ,headers = self.headers, data = data)
         elif method == "put":
-            params = {'channel' : {'status':'status', 'game':'game'}}
-            info = requests.put(url, headers = self.headers, params = params)
+            info = requests.put(url, headers = self.headers, data = data)
         else:
             return -1
 
         info_decode = self.json_decode(info)
-        print info_decode
         return info_decode
 
     def get_gt(self):
@@ -74,10 +68,9 @@ class API:
 
     def set_gt(self, title, game):
         endpoint = "/channels/" + self.channel
-        new_info = {u"channel" : {u"status" : title, u"game" : game}}
-        return_info = self.api_call("put", endpoint, new_info)
-        print return_info
-        return True if return_info else False
+        params = {u"channel[status]" : title, u"channel[game]" : game}
+        return_info = self.api_call("put", endpoint, params)
+        return return_info
 
     def get_stream_object(self):
         endpoint = "/streams/" + self.channel
@@ -91,8 +84,10 @@ class API:
         if time.time() - self.last_commercial > 480:
             new_info = {"length" : length}
             endpoint = "/channels/{}/commercial".format(self.channel)
-            self.api_call("post", endpoint, new_info)
-            self.last_commercial = int(time.time())
+            success = self.api_call("post", endpoint, new_info)
+            if success:
+                self.last_commercial = int(time.time())
+            return success
 
 class Chat:
 
@@ -101,7 +96,12 @@ class Chat:
         self.oauth = oauth
 
     def connect(self):
-        pass
+        twitch_host = "irc.twitch.tv"
+        twitch_port = 6667
+        self.irc = socket.socket()
+        self.irc.connect((twitch_host, twitch_port))
+        print "connected"
+        self.irc.close()
 
     def join_channel(self, channel):
         pass

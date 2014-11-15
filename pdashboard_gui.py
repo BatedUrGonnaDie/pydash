@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Fri Nov 07 02:35:46 2014
+# Created: Fri Nov 14 00:49:16 2014
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -116,7 +116,7 @@ class Ui_pdt(object):
         self.chat_send.setDragEnabled(True)
         self.chat_send.setObjectName("chat_send")
         self.chat_box = QtGui.QTextEdit(self.chat_container)
-        self.chat_box.setGeometry(QtCore.QRect(10, 23, 251, 301))
+        self.chat_box.setGeometry(QtCore.QRect(10, 20, 251, 301))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

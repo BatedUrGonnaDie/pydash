@@ -33,6 +33,13 @@ class Configurer:
 
         return user_config
 
+    def get_completer_list(self):
+        with open("games_list.txt", 'a+') as games_file:
+            games_list = games_file.readlines()
+        for i in range(len(games_list)):
+            games_list[i] = games_list[i][:-1]
+        return games_list
+
     def set_param(self, param, info):
         config_tmp = self.open_file('r')
         config_tmp[param] = info

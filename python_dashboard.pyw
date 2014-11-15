@@ -4,20 +4,24 @@
 from PySide.QtCore      import *
 from PySide.QtGui       import *
 from pdashboard_gui     import Ui_pdt
+
 import sys
 import threading
 import time
+
 import twitch
 import configuration    as config
 
 
 class Dashboard(QMainWindow, Ui_pdt):
 
-    auth_set    = Signal(str)
-    nick_set    = Signal(str)
-    title_set   = Signal(str)
-    game_set    = Signal(str)
-    status_set  = Signal(str)
+    auth_set            = Signal(str)
+    nick_set            = Signal(str)
+    title_set           = Signal(str)
+    game_set            = Signal(str)
+    status_set          = Signal(str)
+    update_status       = Signal()
+    show_new_message    = Signal(str, str, str)
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
@@ -26,8 +30,21 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.authorized = False
         self.chat_connected = False
         self.partner = False
+        self.live = False
 
         self.configure = config.Configurer()
+
+        #set up label for status bar
+        self.status_bools = QLabel(self.centralwidget)
+        self.status_bools.setObjectName("status_bool_text")
+        self.status_bools.setFrameShadow(QFrame.Plain)
+        self.statusBar.addPermanentWidget(self.status_bools)
+
+        #set up auto-complete for game
+        self.games_list = self.configure.get_completer_list()
+        self.game_completer = QCompleter(self.games_list, self.game)
+        self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.game.setCompleter(self.game_completer)
 
         self.authorize_button.clicked.connect(self.configure.get_auth_code)
         self.oauth_get.clicked.connect(self.check_code)
@@ -49,7 +66,9 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.nick_set.connect(self.set_nick_text)
         self.title_set.connect(self.set_title_text)
         self.game_set.connect(self.set_game_text)
-        self.status_set.connect(self.set_status_text)
+        self.status_set.connect(self.status_temp_text)
+        self.update_status.connect(self.set_perm_status_text)
+        self.show_new_message.connect(self.set_new_message)
 
         self.user_config = self.configure.load_file()
         
@@ -57,6 +76,8 @@ class Dashboard(QMainWindow, Ui_pdt):
         auto_minute = threading.Thread(target = self.minute_loop)
         auto_minute.daemon = True
         auto_minute.start()
+
+        self.update_status.emit()
 
         if self.user_config["oauth"] != "":
             self.auth_set.emit(self.user_config["oauth"])
@@ -79,7 +100,13 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.auth_input.setReadOnly(True)
                 self.refresh_gt()
                 self.partner = self.api_worker.check_partner_status()
-                self.status_set.emit("Authenticated | Partner : " + str(self.partner))
+                if self.partner:
+                    self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
+                else:
+                    self.status_set.emit("Authenticated")
+            else:
+                self.update_status.emit("Bad OAuth, Please Retrieve Another")
+        self.update_status.emit()
 
     def connect_to_chat(self):
         if self.authorized:
@@ -105,35 +132,58 @@ class Dashboard(QMainWindow, Ui_pdt):
     def set_game_text(self, text):
         self.game.setText(text)
 
-    def set_status_text(self, text):
+    def status_temp_text(self, text):
         self.statusBar.showMessage(text)
+
+    def set_perm_status_text(self):
+        self.status_bools.setText("Connected to Chat: " + str(self.chat_connected) + " | Live: " + str(self.live))
+
+    def set_new_message(self, sender, color, msg):
+        pass
         
     def ad_click(self):
         if self.authorized and self.partner:
             length = int(self.sender().text())
-            self.api_worker.run_commercial(length)
+            success = self.api_worker.run_commercial(length)
+            if success:
+                self.ad_cooldown(length)
+            else:
+                self.status_set.emit("Commercial Failed to Run")
 
     def set_game_title(self):
         if self.authorized:
-            title = self.title.toPlainText()
-            game = self.game.text()
+            title = self.title.toPlainText().strip()
+            game = self.game.text().strip()
             success = self.api_worker.set_gt(title, game)
-            
+            if success["game"] == game and success["status"] == title:
+                self.status_set.emit("Updated Game and Title")
+            else:
+                self.status_set.emit("Failed to Updated")
     
     def refresh_gt(self):
         if self.authorized:
             title, game = self.api_worker.get_gt()
             if title and game:
-                print game
                 self.title_set.emit(title)
                 self.game_set.emit(game)
+                self.status_set.emit("Game and Title Refreshed")
             else:
-                #status
-                pass
+                self.status_set.emit("Failed to Refresh")
 
     def message_send(self):
         if self.chat_connected:
-            pass
+            msg = self.chat_send.text()
+            self.chat_send.setText("")
+
+    def ad_cooldown(self, length):
+        current_status = self.statusBar.currentMessage()
+        while length > 0:
+            if current_status:
+                self.update_status.emit(current_status + " | Last Ad: " + length)
+            else:
+                self.update_status.emit("Last Ad: " + length)
+            --length
+            time.sleep(1)
 
     def minute_loop(self):
         while True:
@@ -148,6 +198,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                     else:
                         self.viewer_number.display(0)
             time.sleep(60)
+            self.update_status.emit()
 
 
 if __name__ == "__main__":
@@ -155,4 +206,5 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = Dashboard()
     window.show()
+    window.setFixedSize(window.size())
     sys.exit(app.exec_())
