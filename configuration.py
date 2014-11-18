@@ -26,18 +26,21 @@ class Configurer:
         try:
             user_config = self.open_file('r')
         except:
-            user_config = {"channel" : "", "oauth" : "", "max_viewers" : 0}
+            user_config = {"channel" : "", "oauth" : "", "max_viewers" : 0, "position" : [0, 0]}
             self.dump_file(user_config, 'w')
             #if you are worried about me saving any of your info the source is at https://github.com/batedurgonnadie/salty_web
 
         return user_config
 
     def get_completer_list(self):
-        with open("games_list.txt", 'a+') as games_file:
-            games_list = games_file.readlines()
-        for i in range(len(games_list)):
-            games_list[i] = games_list[i][:-1]
-        return games_list
+        try:
+            with open("games_list.txt", 'r') as games_file:
+                games_list = games_file.readlines()
+            for i in range(len(games_list)):
+                games_list[i] = games_list[i][:-1]
+            return games_list
+        except:
+            return False
 
     def set_param(self, param, info):
         config_tmp = self.open_file('r')

@@ -39,11 +39,12 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.status_bools.setFrameShadow(QFrame.Plain)
         self.statusBar.addPermanentWidget(self.status_bools)
 
-        #set up auto-complete for game
+        #set up auto-complete for game if it is present
         self.games_list = self.configure.get_completer_list()
-        self.game_completer = QCompleter(self.games_list, self.game)
-        self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.game.setCompleter(self.game_completer)
+        if self.games_list:
+            self.game_completer = QCompleter(self.games_list, self.game)
+            self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
+            self.game.setCompleter(self.game_completer)
 
         self.authorize_button.clicked.connect(self.configure.get_auth_code)
         self.oauth_get.clicked.connect(self.check_code)
@@ -71,11 +72,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.user_config = self.configure.load_file()
         
-
-        auto_minute = threading.Thread(target = self.minute_loop)
-        auto_minute.daemon = True
-        auto_minute.start()
-
+        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 727, 395)
         self.update_status.emit()
 
         if self.user_config["oauth"] != "":
@@ -83,6 +80,10 @@ class Dashboard(QMainWindow, Ui_pdt):
             checker = threading.Thread(target = self.check_code)
             checker.daemon = True
             checker.start()
+
+        auto_minute = threading.Thread(target = self.minute_loop)
+        auto_minute.daemon = True
+        auto_minute.start()
 
     def check_code(self):
         if not self.authorized:
@@ -103,6 +104,12 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
                 else:
                     self.status_set.emit("Authenticated")
+                    self.ad_30.setEnabled(False)
+                    self.ad_60.setEnabled(False)
+                    self.ad_90.setEnabled(False)
+                    self.ad_120.setEnabled(False)
+                    self.ad_150.setEnabled(False)
+                    self.ad_180.setEnabled(False)
             else:
                 self.status_set.emit("Bad OAuth, Please Retrieve Another")
         self.update_status.emit()
@@ -193,15 +200,23 @@ class Dashboard(QMainWindow, Ui_pdt):
                 info = self.api_worker.get_stream_object()
                 if info:
                     if info["stream"] != None:
+                        self.live = True
                         viewers = info["stream"]["viewers"]
                         self.viewer_number.display(viewers)
                         if viewers > self.user_config["max_viewers"]:
                             self.user_config = self.configure.set_param("max_viewers", viewers)
                     else:
+                        self.live = False
                         self.viewer_number.display(0)
-            time.sleep(60)
-            self.update_status.emit()
 
+            self.update_status.emit()
+            time.sleep(60)
+
+    def closeEvent(self, event):
+        position = [self.pos().x(), self.pos().y()]
+        self.user_config = self.configure.set_param("position", (position))
+        QMainWindow.closeEvent(self, event)
+            
 
 if __name__ == "__main__":
 
