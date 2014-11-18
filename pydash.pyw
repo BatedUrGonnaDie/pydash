@@ -12,7 +12,6 @@ import time
 import twitch
 import configuration    as config
 
-
 class Dashboard(QMainWindow, Ui_pdt):
 
     auth_set            = Signal(str)
@@ -105,18 +104,21 @@ class Dashboard(QMainWindow, Ui_pdt):
                 else:
                     self.status_set.emit("Authenticated")
             else:
-                self.update_status.emit("Bad OAuth, Please Retrieve Another")
+                self.status_set.emit("Bad OAuth, Please Retrieve Another")
         self.update_status.emit()
 
     def connect_to_chat(self):
         if self.authorized:
             if self.chat_connected:
+                del self.chat_worker
                 self.chat_connected = False
+                self.chat_connect.setText("Connect to Chat")
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
                 self.chat_worker = twitch.Chat(nick, oauth)
                 self.chat_connected = True
+                self.chat_connect.setText("Disconnect")
 
                 #chat stuff
 

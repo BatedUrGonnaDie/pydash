@@ -1,3 +1,7 @@
 *.pyc
 *.json
 *.ui
+/build/
+/dist/
+cacert.pem
+*.spec

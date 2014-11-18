@@ -5,6 +5,9 @@ import requests
 import json
 import time
 import socket
+import os
+
+os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
 scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
 

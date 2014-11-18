@@ -28,7 +28,6 @@ class Configurer:
         except:
             user_config = {"channel" : "", "oauth" : "", "max_viewers" : 0}
             self.dump_file(user_config, 'w')
-            webbrowser.open(redirect_url, new = 2)
             #if you are worried about me saving any of your info the source is at https://github.com/batedurgonnadie/salty_web
 
         return user_config
