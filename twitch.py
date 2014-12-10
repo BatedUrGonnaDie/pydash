@@ -6,6 +6,7 @@ import json
 import time
 import socket
 import os
+import re
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
@@ -96,18 +97,35 @@ class Chat:
 
     def __init__(self, name, oauth):
         self.name = name
-        self.oauth = oauth
+        self.oauth = "oauth:" + oauth
+        self.running = False
 
     def connect(self):
         twitch_host = "irc.twitch.tv"
         twitch_port = 6667
         self.irc = socket.socket()
         self.irc.connect((twitch_host, twitch_port))
-        print "connected"
+
+    def irc_disconnect(self):
+        try:
+            self.irc.sendall("QUIT\r\n")
+        except:
+            pass
         self.irc.close()
 
-    def join_channel(self, channel):
-        pass
+    def send_irc_auth(self):
+        self.irc.sendall("PASS {}\r\n".format(self.oauth))
+        self.irc.sendall("NICK {}\r\n".format(self.name))
+
+    def join_channel(self):
+        self.irc.sendall("JOIN #{}\r\n".format(self.name))
+
+    def establish_connection(self):
+        self.connect()
+        self.send_irc_auth()
+        #self.irc.sendall("TWITCHCLIENT 3\r\n")
+        time.sleep(1)
+        self.join_channel()
 
     def parse_msg(self, msg):
         pass
@@ -115,3 +133,27 @@ class Chat:
 
     def send_msg(self, txt):
         pass
+
+    def main_loop(self):
+        self.establish_connection()
+        self.running = True
+
+        while self.running:
+            message = self.irc.recv(4096)
+            if message:
+                if message.startswith("PING"):
+                    self.irc.sendall("PONG tmi.twitch.tv\r\n")
+
+                if message == "":
+                    self.irc_disconnect()
+                    self.establish_connection()
+
+                message = message[:-2]
+                message_parts = re.split("^:([a-z]+)!.+ PRIVMSG #\w+ :(.+)", message)
+                if len(message_parts) != 1:
+                    sender = message_parts[1]
+                    msg = message_parts[2]
+                    print sender + ": " + msg
+                else:
+                    continue
+

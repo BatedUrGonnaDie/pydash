@@ -57,6 +57,14 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.ad_150.clicked.connect(self.ad_click)
         self.ad_180.clicked.connect(self.ad_click)
 
+        #disable buttons unless they are partner, then enable
+        self.ad_30.setEnabled(False)
+        self.ad_60.setEnabled(False)
+        self.ad_90.setEnabled(False)
+        self.ad_120.setEnabled(False)
+        self.ad_150.setEnabled(False)
+        self.ad_180.setEnabled(False)
+
         self.refresh.clicked.connect(self.refresh_gt)
         self.update_game_title.clicked.connect(self.set_game_title)
 
@@ -72,7 +80,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.user_config = self.configure.load_file()
         
-        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 727, 395)
+        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 727, 385)
         self.update_status.emit()
 
         if self.user_config["oauth"] != "":
@@ -104,12 +112,12 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
                 else:
                     self.status_set.emit("Authenticated")
-                    self.ad_30.setEnabled(False)
-                    self.ad_60.setEnabled(False)
-                    self.ad_90.setEnabled(False)
-                    self.ad_120.setEnabled(False)
-                    self.ad_150.setEnabled(False)
-                    self.ad_180.setEnabled(False)
+                    self.ad_30.setEnabled(True)
+                    self.ad_60.setEnabled(True)
+                    self.ad_90.setEnabled(True)
+                    self.ad_120.setEnabled(True)
+                    self.ad_150.setEnabled(True)
+                    self.ad_180.setEnabled(True)
             else:
                 self.status_set.emit("Bad OAuth, Please Retrieve Another")
         self.update_status.emit()
@@ -117,15 +125,22 @@ class Dashboard(QMainWindow, Ui_pdt):
     def connect_to_chat(self):
         if self.authorized:
             if self.chat_connected:
+                self.chat_worker.running = False
+                self.chat_worker.irc_disconnect()
                 del self.chat_worker
                 self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
+                self.update_status.emit()
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
                 self.chat_worker = twitch.Chat(nick, oauth)
+                self.chatter = threading.Thread(target = self.chat_worker.main_loop)
+                self.chatter.daemon = True
+                self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
+                self.update_status.emit()
 
                 #chat stuff
 
