@@ -7,6 +7,8 @@ import time
 import socket
 import os
 import re
+import Queue
+from PySide.QtCore      import *
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
@@ -95,9 +97,12 @@ class API:
 
 class Chat:
 
-    def __init__(self, name, oauth):
+    show_new_message = Signal(str, str, str)
+
+    def __init__(self, name, oauth, q):
         self.name = name
         self.oauth = "oauth:" + oauth
+        self.q = q
         self.running = False
 
     def connect(self):
@@ -153,7 +158,7 @@ class Chat:
                 if len(message_parts) != 1:
                     sender = message_parts[1]
                     msg = message_parts[2]
-                    print sender + ": " + msg
+                    self.q.put([sender, "#000000", msg])
                 else:
                     continue
 

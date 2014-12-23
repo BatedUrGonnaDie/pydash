@@ -8,9 +8,12 @@ from pdashboard_gui     import Ui_pdt
 import sys
 import threading
 import time
+import Queue
 
 import twitch
 import configuration    as config
+
+q = Queue.Queue()
 
 class Dashboard(QMainWindow, Ui_pdt):
 
@@ -134,15 +137,22 @@ class Dashboard(QMainWindow, Ui_pdt):
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
-                self.chat_worker = twitch.Chat(nick, oauth)
+                self.chat_worker = twitch.Chat(nick, oauth, q)
                 self.chatter = threading.Thread(target = self.chat_worker.main_loop)
                 self.chatter.daemon = True
                 self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
                 self.update_status.emit()
+                self.msg_queue = threading.Thread(target = self.get_new_msg)
+                self.msg_queue.daemon = True
+                self.msg_queue.start()
 
-                #chat stuff
+    def get_new_msg(self):
+        while True:
+            data = q.get()
+            print data
+            self.show_new_message.emit(data[0], data[1], data[2])
 
     def set_auth_text(self, text):
         self.auth_input.setText(text)
