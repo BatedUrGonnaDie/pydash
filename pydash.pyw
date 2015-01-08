@@ -42,13 +42,6 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.status_bools.setFrameShadow(QFrame.Plain)
         self.statusBar.addPermanentWidget(self.status_bools)
 
-        #set up auto-complete for game if it is present
-        self.games_list = self.configure.get_completer_list()
-        if self.games_list:
-            self.game_completer = QCompleter(self.games_list, self.game)
-            self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
-            self.game.setCompleter(self.game_completer)
-
         self.authorize_button.clicked.connect(self.configure.get_auth_code)
         self.oauth_get.clicked.connect(self.check_code)
         self.chat_connect.clicked.connect(self.connect_to_chat)
@@ -113,17 +106,25 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.partner = self.api_worker.check_partner_status()
                 if self.partner:
                     self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
-                else:
-                    self.status_set.emit("Authenticated")
                     self.ad_30.setEnabled(True)
                     self.ad_60.setEnabled(True)
                     self.ad_90.setEnabled(True)
                     self.ad_120.setEnabled(True)
                     self.ad_150.setEnabled(True)
                     self.ad_180.setEnabled(True)
+                else:
+                    self.status_set.emit("Authenticated")
             else:
                 self.status_set.emit("Bad OAuth, Please Retrieve Another")
         self.update_status.emit()
+
+    def set_completer(self):
+        #set up auto-complete for game if it is present
+        self.games_list = self.configure.get_completer_list()
+        if self.games_list:
+            self.game_completer = QCompleter(self.games_list, self.game)
+            self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
+            self.game.setCompleter(self.game_completer)
 
     def connect_to_chat(self):
         if self.authorized:
@@ -131,6 +132,8 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
                 del self.chat_worker
+                self.msg_queue.stop()
+                del self.msg_queue
                 self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
                 self.update_status.emit()
@@ -249,4 +252,5 @@ if __name__ == "__main__":
     window = Dashboard()
     window.show()
     window.setFixedSize(window.size())
+    window.set_completer()
     sys.exit(app.exec_())
