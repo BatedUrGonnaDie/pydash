@@ -8,7 +8,6 @@ import socket
 import os
 import re
 import Queue
-from PySide.QtCore      import *
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
@@ -96,8 +95,6 @@ class API:
             return success
 
 class Chat:
-
-    show_new_message = Signal(str, str, str)
 
     def __init__(self, name, oauth, q):
         self.name = name

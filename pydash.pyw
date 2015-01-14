@@ -33,6 +33,7 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.chat_connected = False
         self.partner = False
         self.live = False
+        self.peak_viewer = 0
 
         self.configure = config.Configurer()
 
@@ -189,6 +190,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
     def set_game_title(self):
         if self.authorized:
+            self.status_set.emit("Updating Game and Title...")
             title = self.title.toPlainText().strip()
             game = self.game.text().strip()
             success = self.api_worker.set_gt(title, game)
@@ -199,6 +201,7 @@ class Dashboard(QMainWindow, Ui_pdt):
     
     def refresh_gt(self):
         if self.authorized:
+            self.status_set.emit("Refreshing Game and Title...")
             title, game = self.api_worker.get_gt()
             if title and game:
                 self.title_set.emit(title)
@@ -230,12 +233,15 @@ class Dashboard(QMainWindow, Ui_pdt):
                     if info["stream"] != None:
                         self.live = True
                         viewers = info["stream"]["viewers"]
-                        self.viewer_number.display(viewers)
+                        self.viewer_number.setText(str(viewers))
+                        if viewers > self.peak_viewer:
+                            self.peak_viewer_number.setText(str(viewers))
+                            self.peak_viewer = viewers
                         if viewers > self.user_config["max_viewers"]:
                             self.user_config = self.configure.set_param("max_viewers", viewers)
                     else:
                         self.live = False
-                        self.viewer_number.display(0)
+                        self.viewer_number.setText(str(0))
 
             self.update_status.emit()
             time.sleep(60)
