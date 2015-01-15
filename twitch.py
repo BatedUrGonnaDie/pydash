@@ -125,16 +125,15 @@ class Chat:
     def establish_connection(self):
         self.connect()
         self.send_irc_auth()
-        #self.irc.sendall("TWITCHCLIENT 3\r\n")
+        success = self.irc.recv(4096)
+        if success == ":tmi.twitch.tv NOTICE * :Login unsuccessful\r\n":
+            raise Exception
         time.sleep(1)
         self.join_channel()
 
-    def parse_msg(self, msg):
-        pass
-        #return sender, msg, maybe color
-
     def send_msg(self, txt):
-        pass
+        self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.name, txt))
+        self.q.put([self.name, "blue", txt])
 
     def main_loop(self):
         self.establish_connection()
@@ -150,12 +149,8 @@ class Chat:
                     self.irc_disconnect()
                     self.establish_connection()
 
-                message = message[:-2]
-                message_parts = re.split("^:([a-z]+)!.+ PRIVMSG #\w+ :(.+)", message)
-                if len(message_parts) != 1:
-                    sender = message_parts[1]
-                    msg = message_parts[2]
-                    self.q.put([sender, "#000000", msg])
-                else:
-                    continue
-
+                if message.split(' ')[1] == "PRIVMSG":
+                    message = message.strip()
+                    sender = message.split(':')[1].split('!')[0]
+                    message_body = ':'.join(message.split(':')[2:])
+                    self.q.put([sender, "blue", message_body])

@@ -44,6 +44,7 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.statusBar.addPermanentWidget(self.status_bools)
 
         self.authorize_button.clicked.connect(self.configure.get_auth_code)
+        self.auth_input.returnPressed.connect(self.check_code)
         self.oauth_get.clicked.connect(self.check_code)
         self.chat_connect.clicked.connect(self.connect_to_chat)
 
@@ -54,17 +55,10 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.ad_150.clicked.connect(self.ad_click)
         self.ad_180.clicked.connect(self.ad_click)
 
-        #disable buttons unless they are partner, then enable
-        self.ad_30.setEnabled(False)
-        self.ad_60.setEnabled(False)
-        self.ad_90.setEnabled(False)
-        self.ad_120.setEnabled(False)
-        self.ad_150.setEnabled(False)
-        self.ad_180.setEnabled(False)
-
         self.refresh.clicked.connect(self.refresh_gt)
         self.update_game_title.clicked.connect(self.set_game_title)
 
+        self.chat_send.returnPressed.connect(self.message_send)
         self.send_message.clicked.connect(self.message_send)
 
         self.auth_set.connect(self.set_auth_text)
@@ -117,6 +111,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.status_set.emit("Authenticated")
             else:
                 self.status_set.emit("Bad OAuth, Please Retrieve Another")
+                self.auth_input.setText("")
         self.update_status.emit()
 
     def set_completer(self):
@@ -133,10 +128,11 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
                 del self.chat_worker
-                self.msg_queue.stop()
+                self.msg_bool_loop = False
                 del self.msg_queue
                 self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
+                self.send_message.setEnabled(False)
                 self.update_status.emit()
             else:
                 nick = self.nick.text()
@@ -148,14 +144,15 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
                 self.update_status.emit()
+                self.msg_bool_loop = True
                 self.msg_queue = threading.Thread(target = self.get_new_msg)
                 self.msg_queue.daemon = True
                 self.msg_queue.start()
+                self.send_message.setEnabled(True)
 
     def get_new_msg(self):
-        while True:
+        while self.msg_bool_loop:
             data = q.get()
-            print data
             self.show_new_message.emit(data[0], data[1], data[2])
 
     def set_auth_text(self, text):
@@ -177,7 +174,8 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.status_bools.setText("Connected to Chat: " + str(self.chat_connected) + " | Live: " + str(self.live))
 
     def set_new_message(self, sender, color, msg):
-        pass
+        self.chat_box.append('<font color="{}">{}</font>: {}'.format(color, sender, msg))
+
         
     def ad_click(self):
         if self.authorized and self.partner:
@@ -212,7 +210,9 @@ class Dashboard(QMainWindow, Ui_pdt):
 
     def message_send(self):
         if self.chat_connected:
-            msg = self.chat_send.text()
+            self.chat_worker.send_msg(self.chat_send.text())
+            self.chat_send.setText("")
+        else:
             self.chat_send.setText("")
 
     def ad_cooldown(self, length):
