@@ -71,7 +71,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.user_config = self.configure.load_file()
         
-        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 727, 385)
+        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 385)
         self.update_status.emit()
 
         if self.user_config["oauth"] != "":
