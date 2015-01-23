@@ -6,6 +6,7 @@ import json
 import time
 import socket
 import os
+import shutil
 import re
 import Queue
 
@@ -97,10 +98,50 @@ class API:
 class Chat:
 
     def __init__(self, name, oauth, q):
-        self.name = name
+        self.channel = name
         self.oauth = "oauth:" + oauth
         self.q = q
         self.running = False
+        self.badges = {}
+        self.emotes_dict = {}
+        self.ffz_url = "http://cdn.frankerfacez.com/channel"
+        self.ffz_emotes = []
+        self.ffz_dict = {}
+        self.custom_mod = False
+        self.ffz_check()
+        self.get_broadcaster_icon()
+        self.get_mod_icon()
+
+    def ffz_check(self):
+        url = "{}/{}.css".format(self.ffz_url, self.channel)
+        data = requests.get(url)
+        if data.status_code == 200:
+            if "!important" in data.text:
+                self.custom_mod = True
+
+            lines = data.text.split("\r\n")
+            for i in lines:
+                mod_line = ' '.join(i.split(' ')[1:])[1:-1]
+                emote = re.findall('content: "(.+)";', i)[0]
+                self.ffz_emotes.append(emote)
+
+    def get_broadcaster_icon(self):
+        url = "http://www-cdn.jtvnw.net/images/xarth/badge_broadcaster.svg"
+        image = requests.get(url, stream = True)
+        with open("images/broadcaster_icon.svg", 'wb') as i_file:
+            shutil.copyfileobj(image.raw, i_file)
+
+    def get_mod_icon(self):
+        if self.custom_mod:
+            url = self.ffz_url + "/" + self.channel + "/mod_icon.png"
+            self.mod_icon_type = ".png"
+        else:
+            url = "http://www-cdn.jtvnw.net/images/xarth/badge_mod.svg"
+            self.mod_icon_type = ".svg"
+
+        image = requests.get(url, stream = True)
+        with open("images/mod_icon" + self.mod_icon_type, 'wb') as i_file:
+            shutil.copyfileobj(image.raw, i_file)
 
     def connect(self):
         twitch_host = "irc.twitch.tv"
@@ -117,10 +158,11 @@ class Chat:
 
     def send_irc_auth(self):
         self.irc.sendall("PASS {}\r\n".format(self.oauth))
-        self.irc.sendall("NICK {}\r\n".format(self.name))
+        self.irc.sendall("NICK {}\r\n".format(self.channel))
 
     def join_channel(self):
-        self.irc.sendall("JOIN #{}\r\n".format(self.name))
+        self.irc.sendall("JOIN #{}\r\n".format(self.channel))
+        self.irc.sendall('CAP REQ :twitch.tv/tags\r\n')
 
     def establish_connection(self):
         self.connect()
@@ -132,25 +174,114 @@ class Chat:
         self.join_channel()
 
     def send_msg(self, txt):
-        self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.name, txt))
-        self.q.put([self.name, "blue", txt])
+        self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
+        self.q.put(txt)
+
+    def get_emote_key(self, key, e_dict, url):
+        try:
+            image_file = e_dict[key]
+        except KeyError:
+            print url
+            image = requests.get(url, stream = True)
+            with open("images/" + key + ".png", 'wb') as i_file:
+                image.raw.decode_content = True
+                shutil.copyfileobj(image.raw, i_file)
+            image_file = e_dict[key] = "images/" + key + ".png"
+        return image_file
+
+    def badge_html(self, location, color):
+        return '<img src="{}" height="18" width="18" style="background-color: {}; background-size: 100%;" />'.format(location, color)
+
+    def twitch_badges(self, msg_dict):
+        badges = ''
+        m_tags = msg_dict["tags"]
+
+        if msg_dict["sender"] == self.channel:
+            badges += self.badge_html("images/broadcaster_icon.svg", "#e71818")
+        elif m_tags["user_type"] == "staff":
+            pass
+        elif m_tags["user_type"] == "admin":
+            pass
+        elif m_tags["user_type"] == "global_mod":
+            pass
+        elif m_tags["user_type"]:
+            if m_tags["user_type"] == "mod":
+                badges += self.badge_html("images/mod_icon" + self.mod_icon_type, "#34ae0a")
+
+        if m_tags["turbo"] == 1:
+            pass
+        if m_tags["subscriber"] == 1:
+            pass
+
+        return badges
+
+    def twitch_emote_parse(self, msg, e_tags):
+        if not e_tags["emotes"]:
+            return msg
+
+        emotes = []
+        e_array = e_tags["emotes"].split('/')
+
+        for i in e_array:
+            tmp = i.split(':')
+            emotes.append({tmp[0] : tmp[1]})
+
+        print emotes
+        emotes_sorted = sorted(emotes, key=lambda k: int(k.values()[0].split('-')[0]), reverse=True) 
+        print emotes_sorted
+        for i in emotes_sorted:
+            for k, v in i.iteritems():
+                emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(k)
+                image_file = self.get_emote_key(k, self.emotes_dict, emote_url)
+                emote_replace = '<img src="{}" />'.format(image_file)
+                e_range = v.split('-')
+                msg = msg[0:int(e_range[0])] + emote_replace + msg[(int(e_range[1]) + 1):]
+
+        return msg
+
+    def ffz_parse(self, msg):
+        for i in self.ffz_emotes:
+            if i in msg:
+                emote_url = self.ffz_url + '/' + self.channel + '/' + i + ".png"
+                image_file = self.get_emote_key(i, self.ffz_emotes, emote_url)
+                emote_replace = '<img src="{}" style="verticle-align: center;" />'.format(image_file)
+                msg = msg.replace(i, emote_replace)
+        return msg
+
+    def parse_msg(self, msg_dict):
+        badges = self.twitch_badges(msg_dict)
+        twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
+        twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;">{} <font color="{}">{}</font>: {}</div>'.format(badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
+        return final_msg
 
     def main_loop(self):
         self.establish_connection()
         self.running = True
 
         while self.running:
-            message = self.irc.recv(4096)
+            message = self.irc.recv(4096)#.decode("utf-8")
             if message:
                 if message.startswith("PING"):
                     self.irc.sendall("PONG tmi.twitch.tv\r\n")
+                    continue
 
                 if message == "":
                     self.irc_disconnect()
                     self.establish_connection()
+                    continue
 
-                if message.split(' ')[1] == "PRIVMSG":
-                    message = message.strip()
-                    sender = message.split(':')[1].split('!')[0]
-                    message_body = ':'.join(message.split(':')[2:])
-                    self.q.put([sender, "blue", message_body])
+                try:
+                    action = message.split(' ')[2]
+                except:
+                    continue
+                if action == "PRIVMSG":
+                    msg_parts = message.split(' ')
+                    c_msg = {}
+                    c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
+                    c_msg["sender"] = msg_parts[1][1:].split('!')[0]
+                    c_msg["action"] = msg_parts[2]
+                    c_msg["channel"] = msg_parts[3]
+                    c_msg["message"] = ' '.join(msg_parts[4:])[1:].strip()
+                    print c_msg
+                    self.q.put(self.parse_msg(c_msg))

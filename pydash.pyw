@@ -1,11 +1,13 @@
-#! /usr/bin/python2.7
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
 from PySide.QtCore      import *
 from PySide.QtGui       import *
+from PySide             import QtSvg, QtXml
 from pdashboard_gui     import Ui_pdt
 
 import sys
+import os
 import threading
 import time
 import Queue
@@ -15,6 +17,10 @@ import configuration    as config
 
 q = Queue.Queue()
 
+image_folder = "images"
+if not os.path.exists(image_folder):
+    os.makedirs(image_folder)
+
 class Dashboard(QMainWindow, Ui_pdt):
 
     auth_set            = Signal(str)
@@ -23,7 +29,7 @@ class Dashboard(QMainWindow, Ui_pdt):
     game_set            = Signal(str)
     status_set          = Signal(str)
     update_status       = Signal()
-    show_new_message    = Signal(str, str, str)
+    show_new_message    = Signal(str)
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
@@ -153,7 +159,7 @@ class Dashboard(QMainWindow, Ui_pdt):
     def get_new_msg(self):
         while self.msg_bool_loop:
             data = q.get()
-            self.show_new_message.emit(data[0], data[1], data[2])
+            self.show_new_message.emit(data)
 
     def set_auth_text(self, text):
         self.auth_input.setText(text)
@@ -173,10 +179,10 @@ class Dashboard(QMainWindow, Ui_pdt):
     def set_perm_status_text(self):
         self.status_bools.setText("Connected to Chat: " + str(self.chat_connected) + " | Live: " + str(self.live))
 
-    def set_new_message(self, sender, color, msg):
-        self.chat_box.append('<font color="{}">{}</font>: {}'.format(color, sender, msg))
+    def set_new_message(self, msg):
+        print msg.encode("utf-8")
+        self.chat_box.append(msg)
 
-        
     def ad_click(self):
         if self.authorized and self.partner:
             length = int(self.sender().text())
@@ -247,6 +253,16 @@ class Dashboard(QMainWindow, Ui_pdt):
             time.sleep(60)
 
     def closeEvent(self, event):
+        for files in os.listdir(image_folder):
+            file_path = os.path.join(image_folder, files)
+            try:
+                os.unlink(file_path)
+            except Exception, e:
+                print e
+
+        if self.chat_connected:
+            self.chat_worker.irc_disconnect()
+
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
         QMainWindow.closeEvent(self, event)
