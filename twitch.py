@@ -97,7 +97,7 @@ class API:
 
 class Chat:
 
-    def __init__(self, name, oauth, q):
+    def __init__(self, name, oauth, partner, q):
         self.channel = name
         self.oauth = "oauth:" + oauth
         self.q = q
@@ -109,8 +109,9 @@ class Chat:
         self.ffz_dict = {}
         self.custom_mod = False
         self.ffz_check()
-        self.get_broadcaster_icon()
-        self.get_mod_icon()
+        self.get_chat_badges()
+        if partner:
+            self.get_sub_badge()
 
     def ffz_check(self):
         url = "{}/{}.css".format(self.ffz_url, self.channel)
@@ -125,23 +126,35 @@ class Chat:
                 emote = re.findall('content: "(.+)";', i)[0]
                 self.ffz_emotes.append(emote)
 
-    def get_broadcaster_icon(self):
-        url = "http://www-cdn.jtvnw.net/images/xarth/badge_broadcaster.svg"
+    def save_chat_badges(self, url, key, f_name):
         image = requests.get(url, stream = True)
-        with open("images/broadcaster_icon.svg", 'wb') as i_file:
+        with open(f_name, "wb") as i_file:
             shutil.copyfileobj(image.raw, i_file)
+        self.badges[key] = f_name
 
-    def get_mod_icon(self):
+    def get_chat_badges(self):
+        bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
+        self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
+
         if self.custom_mod:
-            url = self.ffz_url + "/" + self.channel + "/mod_icon.png"
-            self.mod_icon_type = ".png"
+            mod_url = self.ffz_url + "/" + self.channel + "/mod_icon.png"
         else:
-            url = "http://www-cdn.jtvnw.net/images/xarth/badge_mod.svg"
-            self.mod_icon_type = ".svg"
+            mod_url = "http://chat-badges.s3.amazonaws.com/mod.png"
+        self.save_chat_badges(mod_url, "mod", "images/mod_icon.png")
 
-        image = requests.get(url, stream = True)
-        with open("images/mod_icon" + self.mod_icon_type, 'wb') as i_file:
-            shutil.copyfileobj(image.raw, i_file)
+        staff_url = "http://chat-badges.s3.amazonaws.com/staff.png"
+        self.save_chat_badges(staff_url, "staff", "images/staff_icon.png")
+
+        global_url = "http://chat-badges.s3.amazonaws.com/globalmod.png"
+        self.save_chat_badges(global_url, "global_mod", "images/global_mod.png")
+
+        turbo_url = "http://chat-badges.s3.amazonaws.com/turbo.png"
+        self.save_chat_badges(turbo_url, "turbo", "images/turbo_icon.png")
+
+    def get_sub_badge(self):
+        url = "https://api.twitch.tv/kraken/chat/{}/badges".format(self.channel)
+        badge_links = requests.get(url)
+        self.save_chat_badges(badge_links["subscriber"]["image"], "subscriber", "images/sub_icon.png")
 
     def connect(self):
         twitch_host = "irc.twitch.tv"
@@ -189,29 +202,29 @@ class Chat:
             image_file = e_dict[key] = "images/" + key + ".png"
         return image_file
 
-    def badge_html(self, location, color):
-        return '<img src="{}" height="18" width="18" style="background-color: {}; background-size: 100%;" />'.format(location, color)
+    def badge_html(self, badge_file):
+        return '<img src="{}" height="18" width="18" /> '.format(badge_file)
 
     def twitch_badges(self, msg_dict):
         badges = ''
         m_tags = msg_dict["tags"]
 
         if msg_dict["sender"] == self.channel:
-            badges += self.badge_html("images/broadcaster_icon.svg", "#e71818")
-        elif m_tags["user_type"] == "staff":
-            pass
-        elif m_tags["user_type"] == "admin":
-            pass
-        elif m_tags["user_type"] == "global_mod":
-            pass
+            badges += self.badge_html(self.badges["broadcaster"])
         elif m_tags["user_type"]:
-            if m_tags["user_type"] == "mod":
-                badges += self.badge_html("images/mod_icon" + self.mod_icon_type, "#34ae0a")
+            if m_tags["user_type"] == "staff":
+                badges += self.badge_html(self.badges["staff"])
+            elif m_tags["user_type"] == "admin":
+                badges += self.badge_html(self.badges["admin"])
+            elif m_tags["user_type"] == "global_mod":
+                badges += self.badge_html(self.badges["global_mod"])
+            elif m_tags["user_type"] == "mod":
+                badges += self.badge_html(self.badges["mod"])
 
-        if m_tags["turbo"] == 1:
-            pass
-        if m_tags["subscriber"] == 1:
-            pass
+        if m_tags["turbo"] == '1':
+            badges += self.badge_html(self.badges["turbo"])
+        if m_tags["subscriber"] == '1':
+            badges += self.badge_html(self.badges["subscriber"])
 
         return badges
 
@@ -226,14 +239,19 @@ class Chat:
             tmp = i.split(':')
             emotes.append({tmp[0] : tmp[1]})
 
-        print emotes
-        emotes_sorted = sorted(emotes, key=lambda k: int(k.values()[0].split('-')[0]), reverse=True) 
-        print emotes_sorted
+        emotes_long = []
+        for i in emotes:
+            for k, v in i.iteritems():
+                tmp = v.split(',')
+                for i in tmp:
+                    emotes_long.append({k : i})
+
+        emotes_sorted = sorted(emotes_long, key=lambda k: int(k.values()[0].split('-')[0]), reverse=True) 
         for i in emotes_sorted:
             for k, v in i.iteritems():
                 emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(k)
                 image_file = self.get_emote_key(k, self.emotes_dict, emote_url)
-                emote_replace = '<img src="{}" />'.format(image_file)
+                emote_replace = '<img src="{}" style="verticle-align: center;" />'.format(image_file)
                 e_range = v.split('-')
                 msg = msg[0:int(e_range[0])] + emote_replace + msg[(int(e_range[1]) + 1):]
 
@@ -252,7 +270,8 @@ class Chat:
         badges = self.twitch_badges(msg_dict)
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
-        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;">{} <font color="{}">{}</font>: {}</div>'.format(badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;">{}<span style="color: {};">{}</span>: {}</div>'.format\
+            (badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
         return final_msg
 
     def main_loop(self):
