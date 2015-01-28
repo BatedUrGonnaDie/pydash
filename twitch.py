@@ -299,6 +299,11 @@ class Chat:
                     msg_type = message.split(' ')
                     if msg_type[1] == "PRIVMSG " and msg_type[2] == self.channel:
                         send_msg = ' '.join(msg_type)[3:][1:]
+                        msg_time = time.strftime("%I%M ")
+                        if msg_time.startswith('0'):
+                            msg_time = msg_time[1:]
+                        send_msg = msg_time = send_msg
+                        self.q.put(send_msg)
 
                 try:
                     action = message.split(' ')[2]
