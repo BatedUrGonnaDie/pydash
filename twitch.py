@@ -254,7 +254,7 @@ class Chat:
             for k, v in i.iteritems():
                 emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(k)
                 image_file = self.get_emote_key(k, self.emotes_dict, emote_url)
-                emote_replace = '<img src="{}" style="verticle-align: center;" />'.format(image_file)
+                emote_replace = '<img src="{}" />'.format(image_file)
                 e_range = v.split('-')
                 msg = msg[0:int(e_range[0])] + emote_replace + msg[(int(e_range[1]) + 1):]
 
@@ -265,7 +265,7 @@ class Chat:
             if i in msg:
                 emote_url = self.ffz_url + '/' + self.channel + '/' + i + ".png"
                 image_file = self.get_emote_key(i, self.ffz_emotes, emote_url)
-                emote_replace = '<img src="{}" style="verticle-align: center;" />'.format(image_file)
+                emote_replace = '<img src="{}" />'.format(image_file)
                 msg = msg.replace(i, emote_replace)
         return msg
 
