@@ -9,6 +9,7 @@ import os
 import shutil
 import re
 import Queue
+import time
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
@@ -270,8 +271,11 @@ class Chat:
         badges = self.twitch_badges(msg_dict)
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
-        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;">{}<span style="color: {};">{}</span>: {}</div>'.format\
-            (badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
+        msg_time = time.strftime("%I:%M")
+        if msg_time.startswith('0'):
+            msg_time = msg_time[1:]
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'.format\
+            (msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
         return final_msg
 
     def main_loop(self):

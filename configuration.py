@@ -19,7 +19,7 @@ class Configurer:
 
     def dump_file(self, user_object, open_type):
         with open('config.json', open_type) as config_file:
-            json.dump(user_object, config_file, sort_keys = True, indent = 4, ensure_ascii=False, encoding = "utf-8")
+            json.dump(user_object, config_file, sort_keys = True, indent = 4, ensure_ascii = False, encoding = "utf-8")
 
     def load_file(self):
 
