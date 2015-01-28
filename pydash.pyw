@@ -134,6 +134,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
                 del self.chat_worker
+                del self.chat_sender
                 self.msg_bool_loop = False
                 del self.msg_queue
                 self.chat_connected = False
@@ -143,7 +144,9 @@ class Dashboard(QMainWindow, Ui_pdt):
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
-                self.chat_worker = twitch.Chat(nick, oauth, self.partner, q)
+                self.chat_worker = twitch.Chat(nick, oauth, q)
+                self.chat_worker.init_icons(self.partner)
+                self.chat_sender = twitch.Chat(nick, oauth, q)
                 self.chatter = threading.Thread(target = self.chat_worker.main_loop)
                 self.chatter.daemon = True
                 self.chatter.start()
@@ -216,10 +219,21 @@ class Dashboard(QMainWindow, Ui_pdt):
 
     def message_send(self):
         if self.chat_connected:
-            self.chat_worker.send_msg(self.chat_send.text())
+            msg = self.chat_send.text()
+            if msg:
+                tmp_thread = threading.Thread(target = self.thread_send_message, args = [msg])
+                tmp_thread.start()
             self.chat_send.setText("")
         else:
             self.chat_send.setText("")
+
+    def thread_send_message(self, msg):
+        self.chat_sender.establish_connection()
+        if self.chat_sender.send_msg(msg):
+            self.chat_sender.irc_disconnect()
+            return
+        else:
+            raise Exception
 
     def ad_cooldown(self, length):
         current_status = self.statusBar.currentMessage()

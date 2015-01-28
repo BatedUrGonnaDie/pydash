@@ -98,7 +98,7 @@ class API:
 
 class Chat:
 
-    def __init__(self, name, oauth, partner, q):
+    def __init__(self, name, oauth, q):
         self.channel = name
         self.oauth = "oauth:" + oauth
         self.q = q
@@ -109,6 +109,8 @@ class Chat:
         self.ffz_emotes = []
         self.ffz_dict = {}
         self.custom_mod = False
+
+    def init_icons(self, partner):
         self.ffz_check()
         self.get_chat_badges()
         if partner:
@@ -166,7 +168,7 @@ class Chat:
     def irc_disconnect(self):
         try:
             self.irc.sendall("QUIT\r\n")
-        except:
+        except Exception:
             pass
         self.irc.close()
 
@@ -189,7 +191,7 @@ class Chat:
 
     def send_msg(self, txt):
         self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
-        self.q.put(txt)
+        return True
 
     def get_emote_key(self, key, e_dict, url):
         try:
@@ -293,10 +295,15 @@ class Chat:
                     self.irc_disconnect()
                     self.establish_connection()
                     continue
+                elif message.startswith(":jtv!"):
+                    msg_type = message.split(' ')
+                    if msg_type[1] == "PRIVMSG " and msg_type[2] == self.channel:
+                        send_msg = ' '.join(msg_type)[3:][1:]
 
                 try:
                     action = message.split(' ')[2]
                 except:
+                    print message
                     continue
                 if action == "PRIVMSG":
                     msg_parts = message.split(' ')
