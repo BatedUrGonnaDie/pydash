@@ -145,9 +145,9 @@ class Dashboard(QMainWindow, Ui_pdt):
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
                 self.chat_worker = twitch.Chat(nick, oauth, q)
-                self.chat_worker.init_icons(self.partner)
+                #self.chat_worker.init_icons(self.partner)
                 self.chat_sender = twitch.Chat(nick, oauth, q)
-                self.chatter = threading.Thread(target = self.chat_worker.main_loop)
+                self.chatter = threading.Thread(target = self.chat_worker.init_icons, args = (self.partner, self.chat_worker.main_loop))
                 self.chatter.daemon = True
                 self.chatter.start()
                 self.chat_connected = True

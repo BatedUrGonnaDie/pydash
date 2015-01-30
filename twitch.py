@@ -110,11 +110,12 @@ class Chat:
         self.ffz_dict = {}
         self.custom_mod = False
 
-    def init_icons(self, partner):
+    def init_icons(self, partner, start_loop_func):
         self.ffz_check()
         self.get_chat_badges()
         if partner:
             self.get_sub_badge()
+        start_loop_func()
 
     def ffz_check(self):
         url = "{}/{}.css".format(self.ffz_url, self.channel)
@@ -285,7 +286,7 @@ class Chat:
         self.running = True
 
         while self.running:
-            message = self.irc.recv(4096)#.decode("utf-8")
+            message = self.irc.recv(4096)
             if message:
                 if message.startswith("PING"):
                     self.irc.sendall("PONG tmi.twitch.tv\r\n")
@@ -296,9 +297,11 @@ class Chat:
                     self.establish_connection()
                     continue
                 elif message.startswith(":jtv!"):
+                    message = message.strip()
                     msg_type = message.split(' ')
-                    if msg_type[1] == "PRIVMSG " and msg_type[2] == self.channel:
-                        send_msg = ' '.join(msg_type)[3:][1:]
+                    print msg_type
+                    if msg_type[1] == "PRIVMSG" and msg_type[2] == self.channel:
+                        send_msg = (' '.join(msg_type)[3:])[1:]
                         msg_time = time.strftime("%I%M ")
                         if msg_time.startswith('0'):
                             msg_time = msg_time[1:]
