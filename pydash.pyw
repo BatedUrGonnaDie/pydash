@@ -220,10 +220,10 @@ class Dashboard(QMainWindow, Ui_pdt):
     def message_send(self):
         if self.chat_connected:
             msg = self.chat_send.text()
+            self.chat_send.setText("")
             if msg:
                 tmp_thread = threading.Thread(target = self.thread_send_message, args = [msg])
                 tmp_thread.start()
-            self.chat_send.setText("")
         else:
             self.chat_send.setText("")
 
