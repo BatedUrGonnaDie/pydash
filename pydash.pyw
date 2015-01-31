@@ -145,7 +145,6 @@ class Dashboard(QMainWindow, Ui_pdt):
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
                 self.chat_worker = twitch.Chat(nick, oauth, q)
-                #self.chat_worker.init_icons(self.partner)
                 self.chat_sender = twitch.Chat(nick, oauth, q)
                 self.chatter = threading.Thread(target = self.chat_worker.init_icons, args = (self.partner, self.chat_worker.main_loop))
                 self.chatter.daemon = True
@@ -183,7 +182,6 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.status_bools.setText("Connected to Chat: " + str(self.chat_connected) + " | Live: " + str(self.live))
 
     def set_new_message(self, msg):
-        #print msg
         self.chat_box.append(msg)
 
     def ad_click(self):

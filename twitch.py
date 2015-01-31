@@ -189,6 +189,7 @@ class Chat:
             raise Exception
         time.sleep(1)
         self.join_channel()
+        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
 
     def send_msg(self, txt):
         self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
@@ -274,12 +275,16 @@ class Chat:
         badges = self.twitch_badges(msg_dict)
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
+        msg_time = self.get_timestamp()
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
+                    .format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
+        return final_msg
+
+    def get_timestamp(self):
         msg_time = time.strftime("%I:%M")
         if msg_time.startswith('0'):
             msg_time = msg_time[1:]
-        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'.format\
-            (msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
-        return final_msg
+        return msg_time
 
     def main_loop(self):
         self.establish_connection()
@@ -301,12 +306,10 @@ class Chat:
                     msg_type = message.split(' ')
                     print msg_type
                     if msg_type[1] == "PRIVMSG" and msg_type[2] == self.channel:
-                        send_msg = (' '.join(msg_type)[3:])[1:]
-                        msg_time = time.strftime("%I%M ")
-                        if msg_time.startswith('0'):
-                            msg_time = msg_time[1:]
-                        send_msg = msg_time = send_msg
-                        self.q.put(send_msg)
+                        send_msg = ' '.join(msg_type[3:])[1:]
+                        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</span></div>'\
+                                   .format(self.get_timestamp(), send_msg))
+                        continue
 
                 try:
                     action = message.split(' ')[2]
