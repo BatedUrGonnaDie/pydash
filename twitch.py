@@ -162,6 +162,7 @@ class Chat:
         twitch_host = "irc.twitch.tv"
         twitch_port = 6667
         self.irc = socket.socket()
+        self.irc.settimeout(600)
         self.irc.connect((twitch_host, twitch_port))
 
     def irc_disconnect(self):
@@ -187,7 +188,6 @@ class Chat:
             raise Exception
         time.sleep(1)
         self.join_channel()
-        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
 
     def send_msg(self, txt):
         self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
@@ -287,9 +287,14 @@ class Chat:
     def main_loop(self):
         self.establish_connection()
         self.running = True
+        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
 
         while self.running:
-            message = self.irc.recv(4096)
+            try:
+                message = self.irc.recv(4096)
+            except socket.timeout:
+                self.establish_connection()
+
             if message:
                 if message.startswith("PING"):
                     self.irc.sendall("PONG tmi.twitch.tv\r\n")

@@ -79,7 +79,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.user_config = self.configure.load_file()
         
-        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 385)
+        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
         self.update_status.emit()
 
         if self.user_config["oauth"] != "":
@@ -97,7 +97,10 @@ class Dashboard(QMainWindow, Ui_pdt):
             oauth = self.auth_input.text()
             self.api_worker = twitch.API(oauth)
             self.api_worker.set_headers(oauth)
-            info = self.api_worker.check_auth_status()
+            try:
+                info = self.api_worker.check_auth_status()
+            except SSLError:
+                self.check_code()
             if info:
                 if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
                     self.authorized = True
