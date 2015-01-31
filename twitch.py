@@ -13,8 +13,6 @@ import time
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
-scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
-
 class API:
 
     def __init__(self, token, channel = ""):
@@ -30,7 +28,7 @@ class API:
     def check_auth_status(self):
         endpoint = '/'
         info = self.api_call("get", endpoint = endpoint)
-        if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
+        if info:
             return info
         else:
             return False
@@ -60,7 +58,7 @@ class API:
         elif method == "put":
             info = requests.put(url, headers = self.headers, data = data)
         else:
-            return -1
+            raise Exception
 
         info_decode = self.json_decode(info)
         return info_decode

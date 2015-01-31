@@ -17,6 +17,8 @@ import configuration    as config
 
 q = Queue.Queue()
 
+scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
+
 image_folder = "images"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
@@ -97,27 +99,30 @@ class Dashboard(QMainWindow, Ui_pdt):
             self.api_worker.set_headers(oauth)
             info = self.api_worker.check_auth_status()
             if info:
-                self.authorized = True
-                self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
-                self.user_config = self.configure.set_param("oauth", oauth)
-                self.nick_set.emit(info["token"]["user_name"])
-                self.api_worker.channel = self.user_config["channel"]
-                self.auth_input.setReadOnly(True)
-                self.refresh_gt()
-                self.partner = self.api_worker.check_partner_status()
-                if self.partner:
-                    self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
-                    self.ad_30.setEnabled(True)
-                    self.ad_60.setEnabled(True)
-                    self.ad_90.setEnabled(True)
-                    self.ad_120.setEnabled(True)
-                    self.ad_150.setEnabled(True)
-                    self.ad_180.setEnabled(True)
+                if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
+                    self.authorized = True
+                    self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
+                    self.user_config = self.configure.set_param("oauth", oauth)
+                    self.nick_set.emit(info["token"]["user_name"])
+                    self.api_worker.channel = self.user_config["channel"]
+                    self.auth_input.setReadOnly(True)
+                    self.refresh_gt()
+                    self.partner = self.api_worker.check_partner_status()
+                    if self.partner:
+                        self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
+                        self.ad_30.setEnabled(True)
+                        self.ad_60.setEnabled(True)
+                        self.ad_90.setEnabled(True)
+                        self.ad_120.setEnabled(True)
+                        self.ad_150.setEnabled(True)
+                        self.ad_180.setEnabled(True)
+                    else:
+                        self.status_set.emit("Authenticated")
                 else:
-                    self.status_set.emit("Authenticated")
+                    self.status_set.emit("Bad OAuth, Please Retrieve Another")
+                    self.auth_input.setText("")
             else:
-                self.status_set.emit("Bad OAuth, Please Retrieve Another")
-                self.auth_input.setText("")
+                self.status_set.emit("There was an error connecting to Twitch API, please try again.")
         self.update_status.emit()
 
     def set_completer(self):
