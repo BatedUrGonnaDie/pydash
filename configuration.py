@@ -22,15 +22,16 @@ class Configurer:
             json.dump(user_object, config_file, sort_keys = True, indent = 4, ensure_ascii = False, encoding = "utf-8")
 
     def load_file(self):
-
+        user_default = {"channel": "", "oauth": "", "max_viewers": 0, "position": [0, 0], "debug": False}
         try:
             user_config = self.open_file('r')
+            user_default.update(user_config)
         except:
-            user_config = {"channel" : "", "oauth" : "", "max_viewers" : 0, "position" : [0, 0]}
-            self.dump_file(user_config, 'w')
+            self.dump_file(user_default, 'w')
             #if you are worried about me saving any of your info the source is at https://github.com/batedurgonnadie/salty_web
-
-        return user_config
+        if user_config != user_default:
+            self.dump_file(user_default, 'w')
+        return user_default
 
     def get_completer_list(self):
         try:

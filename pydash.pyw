@@ -146,6 +146,7 @@ class Dashboard(QMainWindow, Ui_pdt):
             if self.chat_connected:
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
+                self.chat_sender.irc_disconnect()
                 del self.chat_worker
                 del self.chat_sender
                 self.msg_bool_loop = False
@@ -298,6 +299,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         if self.chat_connected:
             self.chat_worker.irc_disconnect()
+            self.chat_sender.irc_disconnect()
 
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
