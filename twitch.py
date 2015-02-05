@@ -1,15 +1,15 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-import requests
 import json
-import time
-import socket
 import os
-import shutil
-import re
 import Queue
+import re
+import shutil
+import socket
 import time
+
+import requests
 
 os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 

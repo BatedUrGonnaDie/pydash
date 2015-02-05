@@ -1,8 +1,8 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-import os
 import json
+import os
 import webbrowser
 
 redirect_url = "https://leagueofnewbs.com/twitch/dashboard/out"

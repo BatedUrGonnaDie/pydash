@@ -1,17 +1,17 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
+import os
+import Queue
+import sys
+import threading
+import time
+
 from PySide.QtCore      import *
 from PySide.QtGui       import *
 from PySide             import QtSvg, QtXml
+
 from pdashboard_gui     import Ui_pdt
-
-import sys
-import os
-import threading
-import time
-import Queue
-
 import twitch
 import configuration    as config
 
