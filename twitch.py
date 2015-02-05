@@ -115,7 +115,7 @@ class Chat:
     def init_icons(self, partner, start_loop_func):
         self.ffz_check()
         self.get_chat_badges()
-        if partner:
+        if partner and not os.path.exists("images/sub_icon.png"):
             self.get_sub_badge()
         start_loop_func()
 
@@ -139,23 +139,28 @@ class Chat:
         self.badges[key] = f_name
 
     def get_chat_badges(self):
-        bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
-        self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
+        if not os.path.exists("images/broadcaster_icon.png"):
+            bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
+            self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
 
-        if self.custom_mod:
-            mod_url = self.ffz_url + "/" + self.channel + "/mod_icon.png"
-        else:
-            mod_url = "http://chat-badges.s3.amazonaws.com/mod.png"
-        self.save_chat_badges(mod_url, "mod", "images/mod_icon.png")
+        if not os.path.exists("/images/mod_icon.png"):
+            if self.custom_mod:
+                mod_url = self.ffz_url + "/" + self.channel + "/mod_icon.png"
+            else:
+                mod_url = "http://chat-badges.s3.amazonaws.com/mod.png"
+            self.save_chat_badges(mod_url, "mod", "images/mod_icon.png")
 
-        staff_url = "http://chat-badges.s3.amazonaws.com/staff.png"
-        self.save_chat_badges(staff_url, "staff", "images/staff_icon.png")
+        if not os.path.exists("images/broadcaster_icon.png"):
+            staff_url = "http://chat-badges.s3.amazonaws.com/staff.png"
+            self.save_chat_badges(staff_url, "staff", "images/staff_icon.png")
 
-        global_url = "http://chat-badges.s3.amazonaws.com/globalmod.png"
-        self.save_chat_badges(global_url, "global_mod", "images/global_mod.png")
+        if not os.path.exists("images/global_mod.png"):
+            global_url = "http://chat-badges.s3.amazonaws.com/globalmod.png"
+            self.save_chat_badges(global_url, "global_mod", "images/global_mod.png")
 
-        turbo_url = "http://chat-badges.s3.amazonaws.com/turbo.png"
-        self.save_chat_badges(turbo_url, "turbo", "images/turbo_icon.png")
+        if not os.path.exists("images/turbo_icon.png"):
+            turbo_url = "http://chat-badges.s3.amazonaws.com/turbo.png"
+            self.save_chat_badges(turbo_url, "turbo", "images/turbo_icon.png")
 
     def get_sub_badge(self):
         url = "https://api.twitch.tv/kraken/chat/{}/badges".format(self.channel)
