@@ -31,6 +31,7 @@ class Dashboard(QMainWindow, Ui_pdt):
     game_set            = Signal(str)
     status_set          = Signal(str)
     update_status       = Signal()
+    update_hosts        = Signal(str)
     show_new_message    = Signal(str)
 
     def __init__(self, parent = None):
@@ -45,10 +46,12 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         self.configure = config.Configurer()
 
-        #set up label for status bar
+        #set up labels for status bar
+        self.status_hosts = QLabel(self.centralwidget)
+        self.status_hosts.setObjectName("status_host_text")
+        self.statusBar.addPermanentWidget(self.status_hosts)
         self.status_bools = QLabel(self.centralwidget)
         self.status_bools.setObjectName("status_bool_text")
-        self.status_bools.setFrameShadow(QFrame.Plain)
         self.statusBar.addPermanentWidget(self.status_bools)
 
         self.authorize_button.clicked.connect(self.configure.get_auth_code)
@@ -74,13 +77,15 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.title_set.connect(self.set_title_text)
         self.game_set.connect(self.set_game_text)
         self.status_set.connect(self.status_temp_text)
-        self.update_status.connect(self.set_perm_status_text)
+        self.update_status.connect(self.set_status_bools)
+        self.update_hosts.connect(self.set_status_hosts)
         self.show_new_message.connect(self.set_new_message)
 
         self.user_config = self.configure.load_file()
         
         self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
         self.update_status.emit()
+        self.update_hosts.emit("None")
 
         if self.user_config["oauth"] != "":
             self.auth_set.emit(self.user_config["oauth"])
@@ -148,6 +153,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
                 self.send_message.setEnabled(False)
+                q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
                 self.update_status.emit()
             else:
                 nick = self.nick.text()
@@ -186,8 +192,11 @@ class Dashboard(QMainWindow, Ui_pdt):
     def status_temp_text(self, text):
         self.statusBar.showMessage(text)
 
-    def set_perm_status_text(self):
-        self.status_bools.setText("Connected to Chat: " + str(self.chat_connected) + " | Live: " + str(self.live))
+    def set_status_bools(self):
+        self.status_bools.setText("Live: " + str(self.live))
+
+    def set_status_hosts(self, hosters):
+        self.status_hosts.setText("Hosters: " + hosters)
 
     def set_new_message(self, msg):
         self.chat_box.append(msg)
@@ -245,9 +254,9 @@ class Dashboard(QMainWindow, Ui_pdt):
         current_status = self.statusBar.currentMessage()
         while length > 0:
             if current_status:
-                self.update_status.emit(current_status + " | Last Ad: " + length)
+                self.status_set.emit(current_status + " | Last Ad: " + length)
             else:
-                self.update_status.emit("Last Ad: " + length)
+                self.status_set.emit("Last Ad: " + length)
             --length
             time.sleep(1)
 
@@ -268,7 +277,14 @@ class Dashboard(QMainWindow, Ui_pdt):
                     else:
                         self.live = False
                         self.viewer_number.setText(str(0))
-
+                hosters_obj = self.api_worker.get_hosting_object()
+                if hosters_obj:
+                    hosters = [i.values()[0] for i in hosters_obj["hosts"]]
+                    if hosters:
+                        hosters_string = ", ".join(hosters)
+                        self.set_status_hosts(hosters_string)
+                    else:
+                        self.set_status_hosts("None")
             self.update_status.emit()
             time.sleep(60)
 

@@ -1,4 +1,4 @@
-#! /usr/bin/python2.7
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
 import requests
@@ -84,6 +84,10 @@ class API:
             return info
         else:
             return False
+
+    def get_hosting_object(self):
+        hosters = requests.get("https://chatdepot.twitch.tv/rooms/{}/hosts".format(self.channel))
+        return self.json_decode(hosters)
 
     def run_commercial(self, length):
         if time.time() - self.last_commercial > 480:
