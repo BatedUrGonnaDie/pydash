@@ -20,6 +20,8 @@ q = Queue.Queue()
 
 scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
 
+logging.getLogger("requests").setLevel(logging.WARNING)
+
 image_folder = "images"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
@@ -83,6 +85,8 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.show_new_message.connect(self.set_new_message)
 
         self.user_config = self.configure.load_file()
+        if self.user_config["debug"]:
+            logging.basicConfig(filename='debug.log', filemode='w', level=logging.DEBUG)
         
         self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
         self.update_status.emit()
@@ -105,7 +109,8 @@ class Dashboard(QMainWindow, Ui_pdt):
             self.api_worker.set_headers(oauth)
             try:
                 info = self.api_worker.check_auth_status()
-            except SSLError:
+            except Exception, e:
+                logging.exception("Problem checking code, retrying")
                 self.check_code()
             if info:
                 if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
@@ -118,6 +123,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.refresh_gt()
                     self.partner = self.api_worker.check_partner_status()
                     if self.partner:
+                        logging.info("User is partner, enabling partner buttons.")
                         self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
                         self.ad_30.setEnabled(True)
                         self.ad_60.setEnabled(True)
@@ -147,7 +153,6 @@ class Dashboard(QMainWindow, Ui_pdt):
             if self.chat_connected:
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
-                self.chat_sender.irc_disconnect()
                 del self.chat_worker
                 del self.chat_sender
                 self.msg_bool_loop = False
@@ -162,14 +167,14 @@ class Dashboard(QMainWindow, Ui_pdt):
                 oauth = self.api_worker.oauth_token
                 self.chat_worker = twitch.Chat(nick, oauth, q)
                 self.chat_sender = twitch.Chat(nick, oauth, q)
-                self.chatter = threading.Thread(target = self.chat_worker.init_icons, args = (self.partner, self.chat_worker.main_loop))
-                self.chatter.daemon = True
+                logging.info("Starting chatter thread")
+                self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.chat_worker.main_loop))
                 self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
                 self.update_status.emit()
                 self.msg_bool_loop = True
-                self.msg_queue = threading.Thread(target = self.get_new_msg)
+                self.msg_queue = threading.Thread(target=self.get_new_msg)
                 self.msg_queue.daemon = True
                 self.msg_queue.start()
                 self.send_message.setEnabled(True)
@@ -208,7 +213,9 @@ class Dashboard(QMainWindow, Ui_pdt):
             length = int(self.sender().text())
             success = self.api_worker.run_commercial(length)
             if success:
-                self.ad_cooldown(length)
+                ad_thread = threading.Thread(self.ad_cooldown, args=length)
+                ad_thread.daemon = True
+                ad_thread.start()
             else:
                 self.status_set.emit("Commercial Failed to Run")
 
@@ -261,6 +268,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.status_set.emit("Last Ad: " + length)
             --length
             time.sleep(1)
+        return
 
     def minute_loop(self):
         while True:
@@ -300,7 +308,6 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         if self.chat_connected:
             self.chat_worker.irc_disconnect()
-            self.chat_sender.irc_disconnect()
 
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
