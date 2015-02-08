@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Sat Jan 31 15:27:54 2015
+# Created: Sat Feb 07 11:04:27 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -70,6 +70,7 @@ class Ui_pdt(object):
         font.setBold(True)
         self.title_label.setFont(font)
         self.title_label.setScaledContents(True)
+        self.title_label.setAlignment(QtCore.Qt.AlignCenter)
         self.title_label.setObjectName("title_label")
         self.nick_label = QtGui.QLabel(self.centralwidget)
         self.nick_label.setGeometry(QtCore.QRect(10, 50, 46, 31))
@@ -104,6 +105,7 @@ class Ui_pdt(object):
         font.setBold(True)
         self.viewer_text.setFont(font)
         self.viewer_text.setFrameShadow(QtGui.QFrame.Plain)
+        self.viewer_text.setTextFormat(QtCore.Qt.PlainText)
         self.viewer_text.setScaledContents(True)
         self.viewer_text.setAlignment(QtCore.Qt.AlignCenter)
         self.viewer_text.setMargin(0)
@@ -387,7 +389,7 @@ class Ui_pdt(object):
         self.title.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextEditable|QtCore.Qt.TextEditorInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.title.setObjectName("title")
         self.viewer_number = QtGui.QLabel(self.centralwidget)
-        self.viewer_number.setGeometry(QtCore.QRect(290, 280, 81, 51))
+        self.viewer_number.setGeometry(QtCore.QRect(300, 280, 71, 51))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -417,13 +419,14 @@ class Ui_pdt(object):
         font.setBold(True)
         self.viewer_peak_text.setFont(font)
         self.viewer_peak_text.setFrameShadow(QtGui.QFrame.Plain)
+        self.viewer_peak_text.setTextFormat(QtCore.Qt.PlainText)
         self.viewer_peak_text.setScaledContents(True)
         self.viewer_peak_text.setAlignment(QtCore.Qt.AlignCenter)
         self.viewer_peak_text.setMargin(0)
         self.viewer_peak_text.setIndent(-1)
         self.viewer_peak_text.setObjectName("viewer_peak_text")
         self.peak_viewer_number = QtGui.QLabel(self.centralwidget)
-        self.peak_viewer_number.setGeometry(QtCore.QRect(290, 320, 81, 51))
+        self.peak_viewer_number.setGeometry(QtCore.QRect(300, 320, 71, 51))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
