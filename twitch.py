@@ -52,17 +52,21 @@ class API:
     def api_call(self, method, endpoint, data = None):
         url = self.base_url + endpoint
 
-        if method == "get":
-            info = requests.get(url, headers = self.headers)
-        elif method == "post":
-            info = requests.post(url ,headers = self.headers, data = data)
-        elif method == "put":
-            info = requests.put(url, headers = self.headers, data = data)
-        else:
-            raise Exception
-
-        info_decode = self.json_decode(info)
-        return info_decode
+        try:
+            if method == "get":
+                info = requests.get(url, headers = self.headers)
+            elif method == "post":
+                info = requests.post(url ,headers = self.headers, data = data)
+            elif method == "put":
+                info = requests.put(url, headers = self.headers, data = data)
+            else:
+                raise Exception
+            info.raise_for_status()
+            info_decode = self.json_decode(info)
+            return info_decode
+        except Exception, e:
+            logging.exception("API class api_call method")
+            return False
 
     def get_gt(self):
         endpoint = "/channels/" + self.channel
@@ -110,28 +114,33 @@ class Chat:
         self.emotes_dict = {}
         self.ffz_url = "http://cdn.frankerfacez.com/channel"
         self.ffz_emotes = []
+        self.ffz_g_emotes = ["BeanieHipster", "LilZ", "ManChicken", "YellowFever", "YooHoo", "ZreknarF"]
         self.ffz_dict = {}
         self.custom_mod = False
+        logging.info("Chat object initialized")
 
     def init_icons(self, partner, start_loop_func):
+        logging.info("Init icons started")
         self.ffz_check()
         self.get_chat_badges()
         if partner and not os.path.exists("images/sub_icon.png"):
             self.get_sub_badge()
+            logging.info("Sub badge loaded")
+        logging.info("Launching main loop from init_icons")
         start_loop_func()
 
     def ffz_check(self):
         url = "{}/{}.css".format(self.ffz_url, self.channel)
         data = requests.get(url)
         if data.status_code == 200:
-            if "!important" in data.text:
+            if data.text.endswith("!important"):
                 self.custom_mod = True
 
-            lines = data.text.split("\r\n")
-            for i in lines:
-                mod_line = ' '.join(i.split(' ')[1:])[1:-1]
-                emote = re.findall('content: "(.+)";', i)[0]
-                self.ffz_emotes.append(emote)
+            emotes = re.findall('{content:"(.+?)";', data.text)
+            for i in emotes:
+                self.ffz_emotes.append(i)
+        else:
+            logging.info("FFZ did not return a 200.")
 
     def save_chat_badges(self, url, key, f_name):
         image = requests.get(url, stream = True)
@@ -140,6 +149,7 @@ class Chat:
         self.badges[key] = f_name
 
     def get_chat_badges(self):
+        logging.info("Retrieving Chat Badges")
         if not os.path.exists("images/broadcaster_icon.png"):
             bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
             self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
@@ -162,18 +172,23 @@ class Chat:
         if not os.path.exists("images/turbo_icon.png"):
             turbo_url = "http://chat-badges.s3.amazonaws.com/turbo.png"
             self.save_chat_badges(turbo_url, "turbo", "images/turbo_icon.png")
+        logging.info("Chat Badges Downloaded")
 
     def get_sub_badge(self):
+        logging.info("Retrieving Sub Badge")
         url = "https://api.twitch.tv/kraken/chat/{}/badges".format(self.channel)
         badge_links = requests.get(url)
         self.save_chat_badges(badge_links["subscriber"]["image"], "subscriber", "images/sub_icon.png")
+        logging.info("Sub Badge Downloaded")
 
     def connect(self):
+        logging.info("Connecting to Twitch")
         twitch_host = "irc.twitch.tv"
         twitch_port = 6667
         self.irc = socket.socket()
         self.irc.settimeout(600)
         self.irc.connect((twitch_host, twitch_port))
+        logging.info("Connection Complete")
 
     def irc_disconnect(self):
         try:
@@ -183,17 +198,23 @@ class Chat:
         self.irc.close()
 
     def send_irc_auth(self):
+        logging.info("Sending Authentication")
         self.irc.sendall("PASS {}\r\n".format(self.oauth))
         self.irc.sendall("NICK {}\r\n".format(self.channel))
+        logging.info("Authentication Sent")
 
     def join_channel(self):
+        logging.info("Joining Channel and Getting Tags")
         self.irc.sendall("JOIN #{}\r\n".format(self.channel))
         self.irc.sendall('CAP REQ :twitch.tv/tags\r\n')
+        logging.info("Joined Channel and Requested Tags")
 
     def establish_connection(self):
         self.connect()
         self.send_irc_auth()
         success = self.irc.recv(4096)
+        logging.info("Retrieving Initial Messages")
+        logging.debug(success)
         if success == ":tmi.twitch.tv NOTICE * :Login unsuccessful\r\n":
             raise Exception
         time.sleep(1)
@@ -208,11 +229,16 @@ class Chat:
             image_file = e_dict[key]
         except KeyError:
             print url
-            image = requests.get(url, stream = True)
-            with open("images/" + key + ".png", 'wb') as i_file:
-                image.raw.decode_content = True
-                shutil.copyfileobj(image.raw, i_file)
-            image_file = e_dict[key] = "images/" + key + ".png"
+            try:
+                image = requests.get(url, stream = True)
+                image.raise_for_status()
+                with open("images/" + key + ".png", 'wb') as i_file:
+                    image.raw.decode_content = True
+                    shutil.copyfileobj(image.raw, i_file)
+                image_file = e_dict[key] = "images/" + key + ".png"
+            except Exception:
+                logging.exception("Error getting emote image from cdn")
+                image_file = key
         return image_file
 
     def badge_html(self, badge_file):
@@ -274,7 +300,14 @@ class Chat:
         for i in self.ffz_emotes:
             if i in msg:
                 emote_url = self.ffz_url + '/' + self.channel + '/' + i + ".png"
-                image_file = self.get_emote_key(i, self.ffz_emotes, emote_url)
+                image_file = self.get_emote_key(i, self.ffz_dict, emote_url)
+                emote_replace = '<img src="{}" />'.format(image_file)
+                msg = msg.replace(i, emote_replace)
+
+        for i in self.ffz_g_emotes:
+            if i in msg:
+                emote_url = "{}/global/{}.png".format(self.ffz_url, i)
+                image_file = self.get_emote_key(i, self.ffz_dict, emote_url)
                 emote_replace = '<img src="{}" />'.format(image_file)
                 msg = msg.replace(i, emote_replace)
         return msg
@@ -295,10 +328,11 @@ class Chat:
         return msg_time
 
     def main_loop(self):
+        logging.info("Main Loop Started")
         self.establish_connection()
         self.running = True
         self.q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
-
+        logging.info("Entering main_loop while loop")
         while self.running:
             try:
                 message = self.irc.recv(4096)
