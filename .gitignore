@@ -6,3 +6,4 @@
 /dist/
 cacert.pem
 *.spec
+*.log
