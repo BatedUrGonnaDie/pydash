@@ -78,7 +78,7 @@ class API:
 
     def set_gt(self, title, game):
         endpoint = "/channels/" + self.channel
-        params = {u"channel[status]" : title, u"channel[game]" : game}
+        params = {u"channel[status]": title, u"channel[game]": game}
         return_info = self.api_call("put", endpoint, params)
         return return_info
 
@@ -105,11 +105,12 @@ class API:
 
 class Chat:
 
-    def __init__(self, name, oauth, q):
+    def __init__(self, name, oauth):
         self.channel = name
         self.oauth = "oauth:" + oauth
-        self.q = q
         self.running = False
+        self.user_irc_tags = {}
+        self.sender_badge_template = ""
         self.badges = {}
         self.emotes_dict = {}
         self.ffz_url = "http://cdn.frankerfacez.com/channel"
@@ -119,7 +120,8 @@ class Chat:
         self.custom_mod = False
         logging.info("Chat object initialized")
 
-    def init_icons(self, partner, start_loop_func):
+    def init_icons(self, partner, new_msg_signal, start_loop_func):
+        self.new_msg_signal = new_msg_signal
         logging.info("Init icons started")
         self.ffz_check()
         self.get_chat_badges()
@@ -184,7 +186,7 @@ class Chat:
     def connect(self):
         logging.info("Connecting to Twitch")
         twitch_host = "irc.twitch.tv"
-        twitch_port = 6667
+        twitch_port = 443
         self.irc = socket.socket()
         self.irc.settimeout(600)
         self.irc.connect((twitch_host, twitch_port))
@@ -195,7 +197,8 @@ class Chat:
             self.irc.sendall("QUIT\r\n")
         except Exception:
             pass
-        self.irc.close()
+        finally:
+            self.irc.close()
 
     def send_irc_auth(self):
         logging.info("Sending Authentication")
@@ -206,7 +209,18 @@ class Chat:
     def join_channel(self):
         logging.info("Joining Channel and Getting Tags")
         self.irc.sendall("JOIN #{}\r\n".format(self.channel))
-        self.irc.sendall('CAP REQ :twitch.tv/tags\r\n')
+        join_info = self.irc.recv(4096)
+        join_lines = join_info.split("\r\n")
+        for i in join_lines:
+            if i.startswith('@'):
+                parts = i.split(' ')
+                if parts[2] == "USERSTATE":
+                    self.user_irc_tags = dict(item.split('=') for item in parts[0][1:].split(';'))
+        try:
+            self.user_irc_tags["color"]
+        except KeyError:
+            self.irc.sendall("PART #batedurgonnadie")
+            self.join_channel()
         logging.info("Joined Channel and Requested Tags")
 
     def establish_connection(self):
@@ -214,14 +228,36 @@ class Chat:
         self.send_irc_auth()
         success = self.irc.recv(4096)
         logging.info("Retrieving Initial Messages")
-        logging.debug(success)
         if success == ":tmi.twitch.tv NOTICE * :Login unsuccessful\r\n":
+            logging.error("Oauth failed to login user")
             raise Exception
-        time.sleep(1)
+        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
+        self.irc.recv(1024)
         self.join_channel()
+        self.set_sender_badges()
+
+    def set_sender_badges(self):
+        try:
+            self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emotesets"]).json()
+        except Exception, e:
+            self.set_sender_badges()
+        self.sender_badge_template = self.twitch_badges({"tags": self.user_irc_tags, "sender": self.channel})
 
     def send_msg(self, txt):
         self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
+        msg = txt
+        for k, v in self.user_emotes.iteritems():
+            for k2, v2 in v.iteritems():
+                for i in v2:
+                    if re.search(i["code"], msg):
+                        emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(i["id"])
+                        image_file = self.get_emote_key(str(i["id"]), self.emotes_dict, emote_url)
+                        emote_replace = '<img src="{}" />'.format(image_file)
+                        msg = re.sub(i["code"], emote_replace, msg)
+        msg_time = self.get_timestamp()
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
+                    .format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg)
+        self.new_msg_signal.show_new_message.emit(final_msg)
         return True
 
     def get_emote_key(self, key, e_dict, url):
@@ -331,7 +367,7 @@ class Chat:
         logging.info("Main Loop Started")
         self.establish_connection()
         self.running = True
-        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
+        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
         logging.info("Entering main_loop while loop")
         while self.running:
             try:
@@ -354,7 +390,7 @@ class Chat:
                     print msg_type
                     if msg_type[1] == "PRIVMSG" and msg_type[2] == self.channel:
                         send_msg = ' '.join(msg_type[3:])[1:]
-                        self.q.put('<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</span></div>'\
+                        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</span></div>'\
                                    .format(self.get_timestamp(), send_msg))
                         continue
 
@@ -371,5 +407,8 @@ class Chat:
                     c_msg["action"] = msg_parts[2]
                     c_msg["channel"] = msg_parts[3]
                     c_msg["message"] = ' '.join(msg_parts[4:])[1:].strip()
-                    print c_msg
-                    self.q.put(self.parse_msg(c_msg))
+                    try:
+                        print c_msg
+                    except Exception, e:
+                        print e
+                    self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))

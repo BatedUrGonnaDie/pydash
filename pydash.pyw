@@ -3,7 +3,6 @@
 
 import logging
 import os
-import Queue
 import sys
 import threading
 import time
@@ -16,8 +15,6 @@ from pdashboard_gui     import Ui_pdt
 import twitch
 import configuration    as config
 
-q = Queue.Queue()
-
 scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
 
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -25,6 +22,10 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 image_folder = "images"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
+
+class ShowNewMessage(QObject):
+
+    show_new_message = Signal(str)
 
 class Dashboard(QMainWindow, Ui_pdt):
 
@@ -35,7 +36,6 @@ class Dashboard(QMainWindow, Ui_pdt):
     status_set          = Signal(str)
     update_status       = Signal()
     update_hosts        = Signal(str)
-    show_new_message    = Signal(str)
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
@@ -48,6 +48,7 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.peak_viewer = 0
 
         self.configure = config.Configurer()
+        self.new_msg_signal = ShowNewMessage()
 
         #set up labels for status bar
         self.status_hosts = QLabel(self.centralwidget)
@@ -82,7 +83,7 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.status_set.connect(self.status_temp_text)
         self.update_status.connect(self.set_status_bools)
         self.update_hosts.connect(self.set_status_hosts)
-        self.show_new_message.connect(self.set_new_message)
+        self.new_msg_signal.show_new_message.connect(self.set_new_message)
 
         self.user_config = self.configure.load_file()
         if self.user_config["debug"]:
@@ -154,35 +155,22 @@ class Dashboard(QMainWindow, Ui_pdt):
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
                 del self.chat_worker
-                del self.chat_sender
-                self.msg_bool_loop = False
-                del self.msg_queue
                 self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
                 self.send_message.setEnabled(False)
-                q.put('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
+                self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
                 self.update_status.emit()
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
-                self.chat_worker = twitch.Chat(nick, oauth, q)
-                self.chat_sender = twitch.Chat(nick, oauth, q)
+                self.chat_worker = twitch.Chat(nick, oauth)
                 logging.info("Starting chatter thread")
-                self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.chat_worker.main_loop))
+                self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.new_msg_signal, self.chat_worker.main_loop))
                 self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
                 self.update_status.emit()
-                self.msg_bool_loop = True
-                self.msg_queue = threading.Thread(target=self.get_new_msg)
-                self.msg_queue.daemon = True
-                self.msg_queue.start()
                 self.send_message.setEnabled(True)
-
-    def get_new_msg(self):
-        while self.msg_bool_loop:
-            data = q.get()
-            self.show_new_message.emit(data)
 
     def set_auth_text(self, text):
         self.auth_input.setText(text)
@@ -246,18 +234,9 @@ class Dashboard(QMainWindow, Ui_pdt):
             msg = self.chat_send.text()
             self.chat_send.setText("")
             if msg:
-                tmp_thread = threading.Thread(target = self.thread_send_message, args = [msg])
-                tmp_thread.start()
+                self.chat_worker.send_msg(msg)
         else:
             self.chat_send.setText("")
-
-    def thread_send_message(self, msg):
-        self.chat_sender.establish_connection()
-        if self.chat_sender.send_msg(msg):
-            self.chat_sender.irc_disconnect()
-            return
-        else:
-            raise Exception
 
     def ad_cooldown(self, length):
         current_status = self.statusBar.currentMessage()
