@@ -254,6 +254,7 @@ class Chat:
                         image_file = self.get_emote_key(str(i["id"]), self.emotes_dict, emote_url)
                         emote_replace = '<img src="{}" />'.format(image_file)
                         msg = re.sub(i["code"], emote_replace, msg)
+        msg = self.ffz_parse(msg)
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
                     .format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg)
