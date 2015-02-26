@@ -244,7 +244,15 @@ class Chat:
         self.sender_badge_template = self.twitch_badges({"tags": self.user_irc_tags, "sender": self.channel})
 
     def send_msg(self, txt):
-        self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
+        try:
+            self.irc.sendall("PRIVMSG #{} :{}\r\n".format(self.channel, txt))
+        except Exception, e:
+            logging.exception(e)
+            return False
+
+        if txt.startswith('/') or txt.startswith('.'):
+            return True
+
         msg = txt
         for k, v in self.user_emotes.iteritems():
             for k2, v2 in v.iteritems():
@@ -385,31 +393,56 @@ class Chat:
                     self.irc_disconnect()
                     self.establish_connection()
                     continue
-                elif message.startswith(":jtv!"):
-                    message = message.strip()
-                    msg_type = message.split(' ')
-                    print msg_type
-                    if msg_type[1] == "PRIVMSG" and msg_type[2] == self.channel:
-                        send_msg = ' '.join(msg_type[3:])[1:]
-                        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</span></div>'\
-                                   .format(self.get_timestamp(), send_msg))
-                        continue
 
                 try:
-                    action = message.split(' ')[2]
+                    message = message.strip()
+                    msg_parts = message.split(' ')
+                    if message.startswith(':'):
+                        action = msg_parts[1]
+                        msg_parts.insert(0, '')
+                    elif message.startswith('@'):
+                        action = msg_parts[2]
+                    else:
+                        try:
+                            print message
+                            continue
+                        except:
+                            continue
+
                 except:
                     print message
                     continue
                 if action == "PRIVMSG":
-                    msg_parts = message.split(' ')
+                    print message
                     c_msg = {}
-                    c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
+                    if msg_parts[0]:
+                        c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
+                    else:
+                        c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
                     c_msg["sender"] = msg_parts[1][1:].split('!')[0]
                     c_msg["action"] = msg_parts[2]
                     c_msg["channel"] = msg_parts[3]
-                    c_msg["message"] = ' '.join(msg_parts[4:])[1:].strip()
+                    c_msg["message"] = ' '.join(msg_parts[4:])[1:]
                     try:
                         print c_msg
                     except Exception, e:
                         print e
-                    self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
+                    if c_msg["sender"] == "jtv":
+                        jtv_parts = c_msg["message"].split(' ')
+                        if jtv_parts[0] == "USERCOLOR":
+                            new_color = jtv_parts[2].split("\r\n")[0]
+                            self.user_irc_tags["color"] = new_color
+                            logging.info("Chat color set to: {}".format(new_color))
+                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
+                                            .format(self.get_timestamp())
+                        else:
+                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
+                                            .format(self.get_timestamp(), c_msg["message"])
+                        self.new_msg_signal.show_new_message.emit(display_msg)
+                    elif c_msg["sender"] == "twitchnotify":
+                        sub_badge = self.badge_html(self.badges["subscriber"])
+                        display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
+                                .format(self.get_timestamp(), sub_badge, c_msg["message"])
+                        self.new_msg_signal.show_new_message(display_msg)
+                    else:
+                        self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
