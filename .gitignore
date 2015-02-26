@@ -1,7 +1,6 @@
 *.pyc
 *.json
 *.txt
-*.ui
 /build/
 /dist/
 cacert.pem
