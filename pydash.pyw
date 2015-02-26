@@ -286,7 +286,10 @@ class Dashboard(QMainWindow, Ui_pdt):
                 print e
 
         if self.chat_connected:
-            self.chat_worker.irc_disconnect()
+            try:
+                self.chat_worker.irc_disconnect()
+            except Exception, e:
+                pass
 
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
