@@ -358,12 +358,21 @@ class Chat:
         return msg
 
     def parse_msg(self, msg_dict):
+        text_color = "#000000"
+        offset = False
+        if msg_dict["message"].startswith("\x01ACTION "):
+            offset = True
+            text_color = msg_dict["tags"]["color"]
         badges = self.twitch_badges(msg_dict)
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
+        if offset:
+            twitch_ffz_msg = twitch_ffz_msg[7:-1]
+        else:
+            twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
-        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
-                    .format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], twitch_ffz_msg)
+        final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
+                    .format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], text_color, twitch_ffz_msg)
         return final_msg
 
     def get_timestamp(self):
@@ -386,7 +395,7 @@ class Chat:
 
             if message:
                 if message.startswith("PING"):
-                    self.irc.sendall("PONG tmi.twitch.tv\r\n")
+                    self.irc.sendall(message.replace("PING", "PONG"))
                     continue
 
                 if message == "":
@@ -413,7 +422,6 @@ class Chat:
                     print message
                     continue
                 if action == "PRIVMSG":
-                    print message
                     c_msg = {}
                     if msg_parts[0]:
                         c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
