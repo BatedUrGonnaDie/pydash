@@ -145,10 +145,15 @@ class Chat:
             logging.info("FFZ did not return a 200.")
 
     def save_chat_badges(self, url, key, f_name):
-        image = requests.get(url, stream = True)
-        with open(f_name, "wb") as i_file:
-            shutil.copyfileobj(image.raw, i_file)
-        self.badges[key] = f_name
+        try:
+            image = requests.get(url, stream = True)
+            image.raise_for_status()
+            with open(f_name, "wb") as i_file:
+                shutil.copyfileobj(image.raw, i_file)
+            self.badges[key] = f_name
+        except Exception, e:
+            logging.error(e)
+            self.save_chat_badges(url, key, f_name)
 
     def get_chat_badges(self):
         logging.info("Retrieving Chat Badges")
@@ -372,7 +377,7 @@ class Chat:
             twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
-                    .format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], text_color, twitch_ffz_msg)
+                    .decode("utf-8").format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], text_color, twitch_ffz_msg)
         return final_msg
 
     def get_timestamp(self):
@@ -389,68 +394,72 @@ class Chat:
         logging.info("Entering main_loop while loop")
         while self.running:
             try:
-                message = self.irc.recv(4096)
-            except socket.timeout:
-                self.establish_connection()
-
-            if message:
-                if message.startswith("PING"):
-                    self.irc.sendall(message.replace("PING", "PONG"))
-                    continue
-
-                if message == "":
-                    self.irc_disconnect()
-                    self.establish_connection()
-                    continue
-
                 try:
-                    message = message.strip()
-                    msg_parts = message.split(' ')
-                    if message.startswith(':'):
-                        action = msg_parts[1]
-                        msg_parts.insert(0, '')
-                    elif message.startswith('@'):
-                        action = msg_parts[2]
-                    else:
-                        try:
-                            print message
-                            continue
-                        except:
-                            continue
+                    message = self.irc.recv(4096).decode("utf-8")
+                except socket.timeout:
+                    self.establish_connection()
 
-                except:
-                    print message
-                    continue
-                if action == "PRIVMSG":
-                    c_msg = {}
-                    if msg_parts[0]:
-                        c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
-                    else:
-                        c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
-                    c_msg["sender"] = msg_parts[1][1:].split('!')[0]
-                    c_msg["action"] = msg_parts[2]
-                    c_msg["channel"] = msg_parts[3]
-                    c_msg["message"] = ' '.join(msg_parts[4:])[1:]
+                if message:
+                    if message.startswith("PING"):
+                        self.irc.sendall(message.replace("PING", "PONG"))
+                        continue
+
+                    if message == "":
+                        self.irc_disconnect()
+                        self.establish_connection()
+                        continue
+
                     try:
-                        print c_msg
-                    except Exception, e:
-                        print e
-                    if c_msg["sender"] == "jtv":
-                        jtv_parts = c_msg["message"].split(' ')
-                        if jtv_parts[0] == "USERCOLOR":
-                            new_color = jtv_parts[2].split("\r\n")[0]
-                            self.user_irc_tags["color"] = new_color
-                            logging.info("Chat color set to: {}".format(new_color))
-                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
-                                            .format(self.get_timestamp())
+                        message = message.strip()
+                        msg_parts = message.split(' ')
+                        if message.startswith(':'):
+                            action = msg_parts[1]
+                            msg_parts.insert(0, '')
+                        elif message.startswith('@'):
+                            action = msg_parts[2]
                         else:
-                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
-                                            .format(self.get_timestamp(), c_msg["message"])
-                        self.new_msg_signal.show_new_message.emit(display_msg)
-                    elif c_msg["sender"] == "twitchnotify":
-                        sub_badge = self.badge_html(self.badges["subscriber"])
-                        display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
-                                .format(self.get_timestamp(), sub_badge, c_msg["message"])
-                        self.new_msg_signal.show_new_message(display_msg)
-                    else:
-                        self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
+                            try:
+                                print message
+                                continue
+                            except:
+                                continue
+
+                    except:
+                        print message
+                        continue
+                    if action == "PRIVMSG":
+                        c_msg = {}
+                        if msg_parts[0]:
+                            c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
+                        else:
+                            c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
+                        c_msg["sender"] = msg_parts[1][1:].split('!')[0]
+                        c_msg["action"] = msg_parts[2]
+                        c_msg["channel"] = msg_parts[3]
+                        c_msg["message"] = ' '.join(msg_parts[4:])[1:]
+                        try:
+                            print c_msg
+                        except Exception, e:
+                            print e
+                        if c_msg["sender"] == "jtv":
+                            jtv_parts = c_msg["message"].split(' ')
+                            if jtv_parts[0] == "USERCOLOR":
+                                new_color = jtv_parts[2].split("\r\n")[0]
+                                self.user_irc_tags["color"] = new_color
+                                logging.info("Chat color set to: {}".format(new_color))
+                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
+                                                .format(self.get_timestamp())
+                            else:
+                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
+                                                .format(self.get_timestamp(), c_msg["message"])
+                            self.new_msg_signal.show_new_message.emit(display_msg)
+                        elif c_msg["sender"] == "twitchnotify":
+                            sub_badge = self.badge_html(self.badges["subscriber"])
+                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
+                                    .format(self.get_timestamp(), sub_badge, c_msg["message"])
+                            self.new_msg_signal.show_new_message(display_msg)
+                        else:
+                            self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
+            except Exception, e:
+                logging.error(e)
+                continue
