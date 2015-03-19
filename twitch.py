@@ -270,7 +270,7 @@ class Chat:
         msg = self.ffz_parse(msg)
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
-                    .format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg)
+                    .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg.decode("utf-8"))
         self.new_msg_signal.show_new_message.emit(final_msg)
         return True
 

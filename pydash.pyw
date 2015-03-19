@@ -231,7 +231,7 @@ class Dashboard(QMainWindow, Ui_pdt):
 
     def message_send(self):
         if self.chat_connected:
-            msg = self.chat_send.text()
+            msg = self.chat_send.text().encode("utf-8")
             self.chat_send.setText("")
             if msg:
                 self.chat_worker.send_msg(msg)
