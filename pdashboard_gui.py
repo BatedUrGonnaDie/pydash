@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Sat Feb 07 11:04:27 2015
+# Created: Thu Mar 19 03:52:42 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -385,6 +385,7 @@ class Ui_pdt(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.title.setFont(font)
+        self.title.setTabChangesFocus(True)
         self.title.setAcceptRichText(False)
         self.title.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextEditable|QtCore.Qt.TextEditorInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.title.setObjectName("title")
