@@ -15,7 +15,7 @@ from pdashboard_gui     import Ui_pdt
 import twitch
 import configuration    as config
 
-scope = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
+scopes = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
@@ -111,10 +111,10 @@ class Dashboard(QMainWindow, Ui_pdt):
             try:
                 info = self.api_worker.check_auth_status()
             except Exception, e:
-                logging.exception("Problem checking code, retrying")
+                logging.exception(e, "Problem checking code, retrying")
                 self.check_code()
             if info:
-                if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scope:
+                if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scopes:
                     self.authorized = True
                     self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                     self.user_config = self.configure.set_param("oauth", oauth)
@@ -124,7 +124,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.refresh_gt()
                     self.partner = self.api_worker.check_partner_status()
                     if self.partner:
-                        logging.info("User is partner, enabling partner buttons.")
+                        logging.info("User is partner, enabling ad buttons.")
                         self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
                         self.ad_30.setEnabled(True)
                         self.ad_60.setEnabled(True)
@@ -140,6 +140,7 @@ class Dashboard(QMainWindow, Ui_pdt):
             else:
                 self.status_set.emit("There was an error connecting to Twitch API, please try again.")
         self.update_status.emit()
+        return
 
     def set_completer(self):
         #set up auto-complete for game if it is present
@@ -152,10 +153,10 @@ class Dashboard(QMainWindow, Ui_pdt):
     def connect_to_chat(self):
         if self.authorized:
             if self.chat_connected:
+                self.chat_connected = False
                 self.chat_worker.running = False
                 self.chat_worker.irc_disconnect()
                 del self.chat_worker
-                self.chat_connected = False
                 self.chat_connect.setText("Connect to Chat")
                 self.send_message.setEnabled(False)
                 self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
@@ -250,6 +251,7 @@ class Dashboard(QMainWindow, Ui_pdt):
         return
 
     def minute_loop(self):
+        time.sleep(5)
         while True:
             if self.authorized:
                 info = self.api_worker.get_stream_object()
