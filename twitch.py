@@ -120,6 +120,9 @@ class Chat:
         self.custom_mod = False
         logging.info("Chat object initialized")
 
+    def emit_status_msg(self, s_msg):
+        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">{}</div>'.format(s_msg))
+
     def init_icons(self, partner, new_msg_signal, start_loop_func):
         self.new_msg_signal = new_msg_signal
         logging.info("Init icons started")
@@ -152,7 +155,7 @@ class Chat:
                 shutil.copyfileobj(image.raw, i_file)
             self.badges[key] = f_name
         except Exception, e:
-            logging.error(e)
+            logging.exception(e)
             self.save_chat_badges(url, key, f_name)
 
     def get_chat_badges(self):
@@ -241,6 +244,21 @@ class Chat:
         self.join_channel()
         self.set_sender_badges()
 
+    def re_establish_connection(self):
+        self.emit_status_msg("Disconnected from chat, attempting to reconnect...")
+        try:
+            self.irc_disconnect()
+        except Exception, e:
+            pass
+        self.connect()
+        self.send_irc_auth()
+        success = self.irc.recv(4096)
+        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
+        self.irc.recv(1024)
+        self.join_channel()
+        self.emit_status_msg("Successfully reconnected!")
+        return
+
     def set_sender_badges(self):
         try:
             self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emotesets"]).json()
@@ -255,7 +273,11 @@ class Chat:
             logging.exception(e)
             return False
 
+        msg_time = self.get_timestamp()
         if txt.startswith('/') or txt.startswith('.'):
+            final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
+                        .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, txt.decode("utf-8"))
+            self.new_msg_signal.show_new_message.emit(final_msg)
             return True
 
         msg = txt
@@ -268,7 +290,6 @@ class Chat:
                         emote_replace = '<img src="{}" />'.format(image_file)
                         msg = re.sub(i["code"], emote_replace, msg)
         msg = self.ffz_parse(msg)
-        msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
                     .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg.decode("utf-8"))
         self.new_msg_signal.show_new_message.emit(final_msg)
@@ -286,8 +307,8 @@ class Chat:
                     image.raw.decode_content = True
                     shutil.copyfileobj(image.raw, i_file)
                 image_file = e_dict[key] = "images/" + key + ".png"
-            except Exception:
-                logging.exception("Error getting emote image from cdn")
+            except Exception, e:
+                logging.error("Error getting emote image from cdn")
                 image_file = key
         return image_file
 
@@ -390,7 +411,7 @@ class Chat:
         logging.info("Main Loop Started")
         self.establish_connection()
         self.running = True
-        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Connected to chat!</div>')
+        self.emit_status_msg("Connected to chat!")
         logging.info("Entering main_loop while loop")
         message = ""
         while self.running:
@@ -398,71 +419,75 @@ class Chat:
                 try:
                     message += self.irc.recv(4096).decode("utf-8")
                 except socket.timeout:
-                    self.establish_connection()
+                    logging.warning("Socket timed out")
+                    if self.running:
+                        self.re_establish_connection()
+                    continue
 
-                    if message == "":
-                        self.irc_disconnect()
-                        self.establish_connection()
+                if message == "":
+                    logging.warning("Received empty string")
+                    if self.running:
+                        self.re_establish_connection()
+                    continue
+
+                msg_list = message.split("\r\n")
+                while len(msg_list) > 1:
+                    current_message = msg_list.pop(0)
+                    if current_message.startswith("PING"):
+                        self.irc.sendall(current_message.replace("PING", "PONG"))
                         continue
-
-                    msg_list = message.split("\r\n")
-                    while len(msg_list) > 1:
-                        current_message = msg_list.pop(0)
-                        if current_message.startswith("PING"):
-                            self.irc.sendall(current_message.replace("PING", "PONG"))
-                            continue
-                        try:
-                            current_message = current_message.strip()
-                            msg_parts = current_message.split(' ', 4)
-                            if current_message.startswith(':'):
-                                action = msg_parts[1]
-                                msg_parts.insert(0, '')
-                            elif current_message.startswith('@'):
-                                action = msg_parts[2]
-                            else:
-                                try:
-                                    print current_message
-                                    continue
-                                except:
-                                    continue
-
-                        except:
-                            print current_message
-                            continue
-                        if action == "PRIVMSG":
-                            c_msg = {}
-                            if msg_parts[0]:
-                                c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
-                            else:
-                                c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
-                            c_msg["sender"] = msg_parts[1][1:].split('!')[0]
-                            c_msg["action"] = msg_parts[2]
-                            c_msg["channel"] = msg_parts[3]
-                            c_msg["message"] = msg_parts[4][1:]
+                    try:
+                        current_message = current_message.strip()
+                        msg_parts = current_message.split(' ')
+                        if current_message.startswith(':'):
+                            action = msg_parts[1]
+                            msg_parts.insert(0, '')
+                        elif current_message.startswith('@'):
+                            action = msg_parts[2]
+                        else:
                             try:
-                                print c_msg
-                            except Exception, e:
-                                print e
-                            if c_msg["sender"] == "jtv":
-                                jtv_parts = c_msg["message"].split(' ')
-                                if jtv_parts[0] == "USERCOLOR":
-                                    new_color = jtv_parts[2].split("\r\n")[0]
-                                    self.user_irc_tags["color"] = new_color
-                                    logging.info("Chat color set to: {}".format(new_color))
-                                    display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
-                                                    .format(self.get_timestamp())
-                                else:
-                                    display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
-                                                    .format(self.get_timestamp(), c_msg["message"])
-                                self.new_msg_signal.show_new_message.emit(display_msg)
-                            elif c_msg["sender"] == "twitchnotify":
-                                sub_badge = self.badge_html(self.badges["subscriber"])
-                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
-                                        .format(self.get_timestamp(), sub_badge, c_msg["message"])
-                                self.new_msg_signal.show_new_message(display_msg)
+                                print current_message
+                                continue
+                            except:
+                                continue
+
+                    except:
+                        print current_message
+                        continue
+                    if action == "PRIVMSG":
+                        c_msg = {}
+                        if msg_parts[0]:
+                            c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
+                        else:
+                            c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
+                        c_msg["sender"] = msg_parts[1][1:].split('!')[0]
+                        c_msg["action"] = msg_parts[2]
+                        c_msg["channel"] = msg_parts[3]
+                        c_msg["message"] = " ".join(msg_parts[4:])[1:]
+                        try:
+                            print c_msg
+                        except Exception, e:
+                            print e
+                        if c_msg["sender"] == "jtv":
+                            jtv_parts = c_msg["message"].split(' ')
+                            if jtv_parts[0] == "USERCOLOR":
+                                new_color = jtv_parts[2].split("\r\n")[0]
+                                self.user_irc_tags["color"] = new_color
+                                logging.info("Chat color set to: {}".format(new_color))
+                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
+                                                .format(self.get_timestamp())
                             else:
-                                self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
-                        message = msg_list[0]
+                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
+                                                .format(self.get_timestamp(), c_msg["message"])
+                            self.new_msg_signal.show_new_message.emit(display_msg)
+                        elif c_msg["sender"] == "twitchnotify":
+                            sub_badge = self.badge_html(self.badges["subscriber"])
+                            display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
+                                    .format(self.get_timestamp(), sub_badge, c_msg["message"])
+                            self.new_msg_signal.show_new_message(display_msg)
+                        else:
+                            self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
+                message = msg_list[0]
             except Exception, e:
-                logging.error(e)
+                logging.exception(e)
                 continue
