@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Sun Mar 22 03:29:27 2015
+# Created: Sun Mar 22 03:42:08 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -288,7 +288,7 @@ class Ui_pdt(object):
         self.chat_connect.setSizePolicy(sizePolicy)
         self.chat_connect.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
-        font.setPointSize(8)
+        font.setPointSize(7)
         font.setWeight(75)
         font.setBold(True)
         self.chat_connect.setFont(font)
@@ -477,7 +477,7 @@ class Ui_pdt(object):
         self.chat_container.setTitle(QtGui.QApplication.translate("pdt", "Chat", None, QtGui.QApplication.UnicodeUTF8))
         self.send_message.setText(QtGui.QApplication.translate("pdt", "Send", None, QtGui.QApplication.UnicodeUTF8))
         self.game_label.setText(QtGui.QApplication.translate("pdt", "Game:", None, QtGui.QApplication.UnicodeUTF8))
-        self.refresh.setText(QtGui.QApplication.translate("pdt", "Refresh", None, QtGui.QApplication.UnicodeUTF8))
+        self.refresh.setText(QtGui.QApplication.translate("pdt", "Reload", None, QtGui.QApplication.UnicodeUTF8))
         self.auth_code.setText(QtGui.QApplication.translate("pdt", "Auth:", None, QtGui.QApplication.UnicodeUTF8))
         self.authorize_button.setText(QtGui.QApplication.translate("pdt", "Get Auth Code", None, QtGui.QApplication.UnicodeUTF8))
         self.chat_connect.setText(QtGui.QApplication.translate("pdt", "Connect to Chat", None, QtGui.QApplication.UnicodeUTF8))

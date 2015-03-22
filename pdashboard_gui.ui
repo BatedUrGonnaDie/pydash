@@ -463,7 +463,7 @@ and Title</string>
      </font>
     </property>
     <property name="text">
-     <string>Refresh</string>
+     <string>Reload</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="nick">
@@ -664,7 +664,7 @@ and Title</string>
     </property>
     <property name="font">
      <font>
-      <pointsize>8</pointsize>
+      <pointsize>7</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
