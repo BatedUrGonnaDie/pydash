@@ -195,7 +195,7 @@ and Title</string>
      <rect>
       <x>70</x>
       <y>290</y>
-      <width>231</width>
+      <width>251</width>
       <height>31</height>
      </rect>
     </property>
@@ -940,7 +940,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QLabel" name="viewer_number">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>320</x>
       <y>280</y>
       <width>71</width>
       <height>51</height>
@@ -980,7 +980,7 @@ p, li { white-space: pre-wrap; }
      <rect>
       <x>70</x>
       <y>330</y>
-      <width>231</width>
+      <width>251</width>
       <height>31</height>
      </rect>
     </property>
@@ -1034,7 +1034,7 @@ p, li { white-space: pre-wrap; }
    <widget class="QLabel" name="peak_viewer_number">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>320</x>
       <y>320</y>
       <width>71</width>
       <height>51</height>

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Thu Mar 19 03:52:42 2015
+# Created: Sun Mar 22 03:29:27 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -91,7 +91,7 @@ class Ui_pdt(object):
         self.nick_label.setObjectName("nick_label")
         self.viewer_text = QtGui.QLabel(self.centralwidget)
         self.viewer_text.setEnabled(True)
-        self.viewer_text.setGeometry(QtCore.QRect(70, 290, 231, 31))
+        self.viewer_text.setGeometry(QtCore.QRect(70, 290, 251, 31))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -390,7 +390,7 @@ class Ui_pdt(object):
         self.title.setTextInteractionFlags(QtCore.Qt.LinksAccessibleByKeyboard|QtCore.Qt.LinksAccessibleByMouse|QtCore.Qt.TextBrowserInteraction|QtCore.Qt.TextEditable|QtCore.Qt.TextEditorInteraction|QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
         self.title.setObjectName("title")
         self.viewer_number = QtGui.QLabel(self.centralwidget)
-        self.viewer_number.setGeometry(QtCore.QRect(300, 280, 71, 51))
+        self.viewer_number.setGeometry(QtCore.QRect(320, 280, 71, 51))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -406,7 +406,7 @@ class Ui_pdt(object):
         self.viewer_number.setObjectName("viewer_number")
         self.viewer_peak_text = QtGui.QLabel(self.centralwidget)
         self.viewer_peak_text.setEnabled(True)
-        self.viewer_peak_text.setGeometry(QtCore.QRect(70, 330, 231, 31))
+        self.viewer_peak_text.setGeometry(QtCore.QRect(70, 330, 251, 31))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -427,7 +427,7 @@ class Ui_pdt(object):
         self.viewer_peak_text.setIndent(-1)
         self.viewer_peak_text.setObjectName("viewer_peak_text")
         self.peak_viewer_number = QtGui.QLabel(self.centralwidget)
-        self.peak_viewer_number.setGeometry(QtCore.QRect(300, 320, 71, 51))
+        self.peak_viewer_number.setGeometry(QtCore.QRect(320, 320, 71, 51))
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
