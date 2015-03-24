@@ -3,7 +3,6 @@
 
 import json
 import logging
-import os
 import webbrowser
 
 redirect_url = "https://leagueofnewbs.com/twitch/dashboard/out"
@@ -19,19 +18,19 @@ class Configurer:
                 user_config = json.load(config_file, encoding = "utf-8")
             return user_config
         except Exception, e:
-            logging.exception("Could not open the file from configuration.py")
+            logging.exception(e)
             return False
 
     def dump_file(self, user_object, open_type):
         with open('config.json', open_type) as config_file:
-            json.dump(user_object, config_file, sort_keys = True, indent = 4, ensure_ascii = False, encoding = "utf-8")
+            json.dump(user_object, config_file, sort_keys=True, indent=4, ensure_ascii=False, encoding="utf-8")
 
     def load_file(self):
         user_default = {"channel": "", "oauth": "", "max_viewers": 0, "position": [0, 0], "debug": True}
         try:
             user_config = self.open_file('r')
             user_default.update(user_config)
-        except:
+        except IOError:
             self.dump_file(user_default, 'w')
             logging.info("New Config File Created")
         if user_config != user_default:
@@ -47,7 +46,7 @@ class Configurer:
                 games_list[i] = games_list[i][:-1]
             return games_list
         except Exception, e:
-            logging.exception("Completer list threw exception")
+            logging.exception(e)
             return False
 
     def set_param(self, param, info):
@@ -58,4 +57,4 @@ class Configurer:
 
 
     def get_auth_code(self):
-        webbrowser.open(redirect_url, new = 1)
+        webbrowser.open(redirect_url, new=1)
