@@ -7,8 +7,9 @@ import sys
 import threading
 import time
 
-from PySide.QtCore      import *
-from PySide.QtGui       import *
+
+import PySide.QtCore    as QtCore
+import PySide.QtGui     as QtGui
 from PySide             import QtSvg, QtXml
 
 from pdashboard_gui     import Ui_pdt
@@ -23,19 +24,20 @@ image_folder = "images"
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
 
-class ShowNewMessage(QObject):
+class SignalCollection(QtCore.QObject):
 
-    show_new_message = Signal(str)
+    auth_set       = QtCore.Signal(str)
+    nick_set       = QtCore.Signal(str)
+    title_set      = QtCore.Signal(str)
+    game_set       = QtCore.Signal(str)
+    status_set     = QtCore.Signal(str)
+    update_status  = QtCore.Signal()
+    update_hosts   = QtCore.Signal(str)
 
-class Dashboard(QMainWindow, Ui_pdt):
+    show_new_message = QtCore.Signal(str)
+    update_msg_time  = QtCore.Signal(str)
 
-    auth_set            = Signal(str)
-    nick_set            = Signal(str)
-    title_set           = Signal(str)
-    game_set            = Signal(str)
-    status_set          = Signal(str)
-    update_status       = Signal()
-    update_hosts        = Signal(str)
+class Dashboard(QtGui.QMainWindow, Ui_pdt):
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
@@ -46,15 +48,16 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.partner = False
         self.live = False
         self.peak_viewer = 0
+        self.last_message = int(time.time())
 
         self.configure = config.Configurer()
-        self.new_msg_signal = ShowNewMessage()
+        self.signals = SignalCollection()
 
         #set up labels for status bar
-        self.status_hosts = QLabel(self.centralwidget)
+        self.status_hosts = QtGui.QLabel(self.centralwidget)
         self.status_hosts.setObjectName("status_host_text")
         self.statusBar.addPermanentWidget(self.status_hosts)
-        self.status_bools = QLabel(self.centralwidget)
+        self.status_bools = QtGui.QLabel(self.centralwidget)
         self.status_bools.setObjectName("status_bool_text")
         self.statusBar.addPermanentWidget(self.status_bools)
 
@@ -76,30 +79,31 @@ class Dashboard(QMainWindow, Ui_pdt):
         self.chat_send.returnPressed.connect(self.message_send)
         self.send_message.clicked.connect(self.message_send)
 
-        self.auth_set.connect(self.set_auth_text)
-        self.nick_set.connect(self.set_nick_text)
-        self.title_set.connect(self.set_title_text)
-        self.game_set.connect(self.set_game_text)
-        self.status_set.connect(self.status_temp_text)
-        self.update_status.connect(self.set_status_bools)
-        self.update_hosts.connect(self.set_status_hosts)
-        self.new_msg_signal.show_new_message.connect(self.set_new_message)
+        self.signals.auth_set.connect(self.set_auth_text)
+        self.signals.nick_set.connect(self.set_nick_text)
+        self.signals.title_set.connect(self.set_title_text)
+        self.signals.game_set.connect(self.set_game_text)
+        self.signals.status_set.connect(self.status_temp_text)
+        self.signals.update_status.connect(self.set_status_bools)
+        self.signals.update_hosts.connect(self.set_status_hosts)
+        self.signals.show_new_message.connect(self.set_new_message)
+        self.signals.update_msg_time.connect(self.update_last_message)
 
         self.user_config = self.configure.load_file()
         if self.user_config["debug"]:
             logging.basicConfig(filename='debug.log', filemode='w', level=logging.DEBUG)
         
         self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
-        self.update_status.emit()
-        self.update_hosts.emit("None")
+        self.signals.update_status.emit()
+        self.signals.update_hosts.emit("None")
 
         if self.user_config["oauth"] != "":
-            self.auth_set.emit(self.user_config["oauth"])
-            checker = threading.Thread(target = self.check_code)
+            self.signals.auth_set.emit(self.user_config["oauth"])
+            checker = threading.Thread(target=self.check_code)
             checker.daemon = True
             checker.start()
 
-        auto_minute = threading.Thread(target = self.minute_loop)
+        auto_minute = threading.Thread(target=self.minute_loop)
         auto_minute.daemon = True
         auto_minute.start()
 
@@ -118,14 +122,14 @@ class Dashboard(QMainWindow, Ui_pdt):
                     self.authorized = True
                     self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                     self.user_config = self.configure.set_param("oauth", oauth)
-                    self.nick_set.emit(info["token"]["user_name"])
+                    self.signals.nick_set.emit(info["token"]["user_name"])
                     self.api_worker.channel = self.user_config["channel"]
                     self.auth_input.setReadOnly(True)
                     self.refresh_gt()
                     self.partner = self.api_worker.check_partner_status()
                     if self.partner:
                         logging.info("User is partner, enabling ad buttons.")
-                        self.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
+                        self.signals.status_set.emit("Authenticated | Partner: Commercial Buttons Enabled")
                         self.ad_30.setEnabled(True)
                         self.ad_60.setEnabled(True)
                         self.ad_90.setEnabled(True)
@@ -133,21 +137,21 @@ class Dashboard(QMainWindow, Ui_pdt):
                         self.ad_150.setEnabled(True)
                         self.ad_180.setEnabled(True)
                     else:
-                        self.status_set.emit("Authenticated")
+                        self.signals.status_set.emit("Authenticated")
                 else:
-                    self.status_set.emit("Bad OAuth, Please Retrieve Another")
+                    self.signals.status_set.emit("Bad OAuth, Please Retrieve Another")
                     self.auth_input.setText("")
             else:
-                self.status_set.emit("There was an error connecting to Twitch API, please try again.")
-        self.update_status.emit()
+                self.signals.status_set.emit("There was an error connecting to Twitch API, please try again.")
+        self.signals.update_status.emit()
         return
 
     def set_completer(self):
         #set up auto-complete for game if it is present
         self.games_list = self.configure.get_completer_list()
         if self.games_list:
-            self.game_completer = QCompleter(self.games_list, self.game)
-            self.game_completer.setCaseSensitivity(Qt.CaseInsensitive)
+            self.game_completer = QtGui.QCompleter(self.games_list, self.game)
+            self.game_completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
             self.game.setCompleter(self.game_completer)
 
     def connect_to_chat(self):
@@ -159,18 +163,18 @@ class Dashboard(QMainWindow, Ui_pdt):
                 del self.chat_worker
                 self.chat_connect.setText("Connect to Chat")
                 self.send_message.setEnabled(False)
-                self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
-                self.update_status.emit()
+                self.signals.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">Disconnected from chat.</div>')
+                self.signals.update_status.emit()
             else:
                 nick = self.nick.text()
                 oauth = self.api_worker.oauth_token
-                self.chat_worker = twitch.Chat(nick, oauth)
+                self.chat_worker = twitch.Chat(nick, oauth, self.signals)
                 logging.info("Starting chatter thread")
-                self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.new_msg_signal, self.chat_worker.main_loop))
+                self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.chat_worker.main_loop))
                 self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")
-                self.update_status.emit()
+                self.signals.update_status.emit()
                 self.send_message.setEnabled(True)
 
     def set_auth_text(self, text):
@@ -197,6 +201,9 @@ class Dashboard(QMainWindow, Ui_pdt):
     def set_new_message(self, msg):
         self.chat_box.append(msg)
 
+    def update_last_message(self, time_sent):
+        self.last_message = time_sent
+
     def ad_click(self):
         if self.authorized and self.partner:
             length = int(self.sender().text())
@@ -206,29 +213,29 @@ class Dashboard(QMainWindow, Ui_pdt):
                 ad_thread.daemon = True
                 ad_thread.start()
             else:
-                self.status_set.emit("Commercial Failed to Run")
+                self.signals.status_set.emit("Commercial Failed to Run")
 
     def set_game_title(self):
         if self.authorized:
-            self.status_set.emit("Updating Game and Title...")
+            self.signals.status_set.emit("Updating Game and Title...")
             title = self.title.toPlainText().strip()
             game = self.game.text().strip()
             success = self.api_worker.set_gt(title, game)
             if success["game"] == game and success["status"] == title:
-                self.status_set.emit("Updated Game and Title")
+                self.signals.status_set.emit("Updated Game and Title")
             else:
-                self.status_set.emit("Failed to Updated")
+                self.signals.status_set.emit("Failed to Updated Game and Title")
     
     def refresh_gt(self):
         if self.authorized:
-            self.status_set.emit("Refreshing Game and Title...")
+            self.signals.status_set.emit("Refreshing Game and Title...")
             title, game = self.api_worker.get_gt()
             if title and game:
-                self.title_set.emit(title)
-                self.game_set.emit(game)
-                self.status_set.emit("Game and Title Refreshed")
+                self.signals.title_set.emit(title)
+                self.signals.game_set.emit(game)
+                self.signals.status_set.emit("Game and Title Refreshed")
             else:
-                self.status_set.emit("Failed to Refresh")
+                self.signals.status_set.emit("Failed to Refresh")
 
     def message_send(self):
         if self.chat_connected:
@@ -243,10 +250,11 @@ class Dashboard(QMainWindow, Ui_pdt):
         current_status = self.statusBar.currentMessage()
         while length > 0:
             if current_status:
-                self.status_set.emit(current_status + " | Last Ad: " + length)
+                current_status = current_status.split(" | ")[0]
+                self.signals.status_set.emit(current_status + " | Last Ad: " + str(length))
             else:
-                self.status_set.emit("Last Ad: " + length)
-            --length
+                self.signals.status_set.emit("Last Ad: " + length)
+            length -= length
             time.sleep(1)
         return
 
@@ -267,7 +275,7 @@ class Dashboard(QMainWindow, Ui_pdt):
                             self.user_config = self.configure.set_param("max_viewers", viewers)
                     else:
                         self.live = False
-                        self.viewer_number.setText(str(0))
+                        self.viewer_number.setText('0')
                 hosters_obj = self.api_worker.get_hosting_object()
                 if hosters_obj:
                     hosters = [i.values()[0] for i in hosters_obj["hosts"]]
@@ -276,7 +284,13 @@ class Dashboard(QMainWindow, Ui_pdt):
                         self.set_status_hosts(hosters_string)
                     else:
                         self.set_status_hosts("None")
-            self.update_status.emit()
+
+                current_time = int(time.time())
+                if self.chat_connected and self.last_message < (current_time + 60):
+                    self.chat_worker.send_ping()
+                    self.last_message = current_time
+
+            self.signals.update_status.emit()
             time.sleep(60)
 
     def closeEvent(self, event):
@@ -285,7 +299,7 @@ class Dashboard(QMainWindow, Ui_pdt):
             try:
                 os.unlink(file_path)
             except Exception, e:
-                print e
+                logging.exception(e)
 
         if self.chat_connected:
             try:
@@ -295,12 +309,12 @@ class Dashboard(QMainWindow, Ui_pdt):
 
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
-        QMainWindow.closeEvent(self, event)
+        QtGui.QMainWindow.closeEvent(self, event)
             
 
 if __name__ == "__main__":
 
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     window = Dashboard()
     window.show()
     window.setFixedSize(window.size())
