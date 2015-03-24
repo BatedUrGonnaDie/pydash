@@ -17,6 +17,8 @@ class Configurer:
             with open("config.json", open_type) as config_file:
                 user_config = json.load(config_file, encoding = "utf-8")
             return user_config
+        except IOError:
+            raise
         except Exception, e:
             logging.exception(e)
             return False
@@ -32,6 +34,7 @@ class Configurer:
             user_default.update(user_config)
         except IOError:
             self.dump_file(user_default, 'w')
+            user_config = user_default
             logging.info("New Config File Created")
         if user_config != user_default:
             self.dump_file(user_default, 'w')
