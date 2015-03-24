@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import json
 import os
-import Queue
 import re
 import shutil
 import socket
@@ -65,7 +63,7 @@ class API:
             info_decode = self.json_decode(info)
             return info_decode
         except Exception, e:
-            logging.exception("API class api_call method")
+            logging.exception(e)
             return False
 
     def get_gt(self):
@@ -105,9 +103,10 @@ class API:
 
 class Chat:
 
-    def __init__(self, name, oauth):
+    def __init__(self, name, oauth, signals):
         self.channel = name
         self.oauth = "oauth:" + oauth
+        self.signals = signals
         self.running = False
         self.user_irc_tags = {}
         self.sender_badge_template = ""
@@ -121,10 +120,9 @@ class Chat:
         logging.info("Chat object initialized")
 
     def emit_status_msg(self, s_msg):
-        self.new_msg_signal.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">{}</div>'.format(s_msg))
+        self.signals.show_new_message.emit('<div style="margin-top: 2px; margin-bottom: 2px; color: #858585;">{}</div>'.format(s_msg))
 
-    def init_icons(self, partner, new_msg_signal, start_loop_func):
-        self.new_msg_signal = new_msg_signal
+    def init_icons(self, partner, start_loop_func):
         logging.info("Init icons started")
         self.ffz_check()
         self.get_chat_badges()
@@ -149,7 +147,7 @@ class Chat:
 
     def save_chat_badges(self, url, key, f_name):
         try:
-            image = requests.get(url, stream = True)
+            image = requests.get(url, stream=True)
             image.raise_for_status()
             with open(f_name, "wb") as i_file:
                 shutil.copyfileobj(image.raw, i_file)
@@ -208,6 +206,10 @@ class Chat:
         finally:
             self.irc.close()
 
+    def send_ping(self):
+        self.irc.sendall("PING\r\n")
+        return
+
     def send_irc_auth(self):
         logging.info("Sending Authentication")
         self.irc.sendall("PASS {}\r\n".format(self.oauth))
@@ -248,11 +250,11 @@ class Chat:
         self.emit_status_msg("Disconnected from chat, attempting to reconnect...")
         try:
             self.irc_disconnect()
-        except Exception, e:
+        except Exception:
             pass
         self.connect()
         self.send_irc_auth()
-        success = self.irc.recv(4096)
+        self.irc.recv(4096)
         self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
         self.irc.recv(1024)
         self.join_channel()
@@ -262,7 +264,7 @@ class Chat:
     def set_sender_badges(self):
         try:
             self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emotesets"]).json()
-        except Exception, e:
+        except Exception:
             self.set_sender_badges()
         self.sender_badge_template = self.twitch_badges({"tags": self.user_irc_tags, "sender": self.channel})
 
@@ -277,12 +279,12 @@ class Chat:
         if txt.startswith('/') or txt.startswith('.'):
             final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
                         .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, txt.decode("utf-8"))
-            self.new_msg_signal.show_new_message.emit(final_msg)
+            self.signals.show_new_message.emit(final_msg)
             return True
 
         msg = txt
-        for k, v in self.user_emotes.iteritems():
-            for k2, v2 in v.iteritems():
+        for v in self.user_emotes.values():
+            for v2 in v.values():
                 for i in v2:
                     if re.search(i["code"], msg):
                         emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(i["id"])
@@ -292,7 +294,7 @@ class Chat:
         msg = self.ffz_parse(msg)
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
                     .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg.decode("utf-8"))
-        self.new_msg_signal.show_new_message.emit(final_msg)
+        self.signals.show_new_message.emit(final_msg)
         return True
 
     def get_emote_key(self, key, e_dict, url):
@@ -301,13 +303,13 @@ class Chat:
         except KeyError:
             print url
             try:
-                image = requests.get(url, stream = True)
+                image = requests.get(url, stream=True)
                 image.raise_for_status()
                 with open("images/" + key + ".png", 'wb') as i_file:
                     image.raw.decode_content = True
                     shutil.copyfileobj(image.raw, i_file)
                 image_file = e_dict[key] = "images/" + key + ".png"
-            except Exception, e:
+            except Exception:
                 logging.error("Error getting emote image from cdn")
                 image_file = key
         return image_file
@@ -433,6 +435,7 @@ class Chat:
                 msg_list = message.split("\r\n")
                 while len(msg_list) > 1:
                     current_message = msg_list.pop(0)
+                    self.signals.update_msg_time.emit(int(time.time()))
                     if current_message.startswith("PING"):
                         self.irc.sendall(current_message.replace("PING", "PONG"))
                         continue
@@ -448,10 +451,10 @@ class Chat:
                             try:
                                 print current_message
                                 continue
-                            except:
+                            except Exception:
                                 continue
 
-                    except:
+                    except Exception:
                         print current_message
                         continue
                     if action == "PRIVMSG":
@@ -479,14 +482,14 @@ class Chat:
                             else:
                                 display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
                                                 .format(self.get_timestamp(), c_msg["message"])
-                            self.new_msg_signal.show_new_message.emit(display_msg)
+                            self.signals.show_new_message.emit(display_msg)
                         elif c_msg["sender"] == "twitchnotify":
                             sub_badge = self.badge_html(self.badges["subscriber"])
                             display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
                                     .format(self.get_timestamp(), sub_badge, c_msg["message"])
-                            self.new_msg_signal.show_new_message(display_msg)
+                            self.signals.show_new_message(display_msg)
                         else:
-                            self.new_msg_signal.show_new_message.emit(self.parse_msg(c_msg))
+                            self.signals.show_new_message.emit(self.parse_msg(c_msg))
                 message = msg_list[0]
             except Exception, e:
                 logging.exception(e)
