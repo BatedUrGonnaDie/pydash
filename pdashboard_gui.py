@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pdashboard_gui.ui'
 #
-# Created: Sun Mar 22 03:42:08 2015
+# Created: Mon Mar 23 15:42:50 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -288,7 +288,7 @@ class Ui_pdt(object):
         self.chat_connect.setSizePolicy(sizePolicy)
         self.chat_connect.setSizeIncrement(QtCore.QSize(0, 0))
         font = QtGui.QFont()
-        font.setPointSize(7)
+        font.setPointSize(8)
         font.setWeight(75)
         font.setBold(True)
         self.chat_connect.setFont(font)
