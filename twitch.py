@@ -250,7 +250,6 @@ class Chat:
         self.set_sender_badges()
 
     def re_establish_connection(self):
-        self.emit_status_msg("Disconnected from chat, attempting to reconnect...")
         try:
             self.irc_disconnect()
         except Exception:
@@ -261,7 +260,6 @@ class Chat:
         self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
         self.irc.recv(1024)
         self.join_channel()
-        self.emit_status_msg("Successfully reconnected!")
         return
 
     def set_sender_badges(self):
