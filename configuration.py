@@ -11,7 +11,7 @@ class Configurer:
 
     def __init__(self):
         pass
-        
+
     def open_file(self, open_type):
         try:
             with open("config.json", open_type) as config_file:

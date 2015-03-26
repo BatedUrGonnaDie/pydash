@@ -92,7 +92,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
         self.user_config = self.configure.load_file()
         if self.user_config["debug"]:
             logging.basicConfig(filename='debug.log', filemode='w', level=logging.DEBUG)
-        
+
         self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
         self.signals.update_status.emit()
         self.signals.update_hosts.emit("None")
@@ -225,7 +225,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                 self.signals.status_set.emit("Updated Game and Title")
             else:
                 self.signals.status_set.emit("Failed to Updated Game and Title")
-    
+
     def refresh_gt(self):
         if self.authorized:
             self.signals.status_set.emit("Refreshing Game and Title...")
@@ -310,7 +310,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
         position = [self.pos().x(), self.pos().y()]
         self.user_config = self.configure.set_param("position", (position))
         QtGui.QMainWindow.closeEvent(self, event)
-            
+
 
 if __name__ == "__main__":
 

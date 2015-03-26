@@ -6,11 +6,14 @@ import os
 import re
 import shutil
 import socket
+import sys
 import time
 
 import requests
 
-os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
+if hasattr(sys, "frozen"):
+    print 'yes'
+    os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
 class API:
 
