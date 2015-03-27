@@ -115,7 +115,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
             try:
                 info = self.api_worker.check_auth_status()
             except Exception, e:
-                logging.exception(e, "Problem checking code, retrying")
+                logging.exception(e)
                 self.check_code()
             if info:
                 if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scopes:
@@ -171,6 +171,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                 self.chat_worker = twitch.Chat(nick, oauth, self.signals)
                 logging.info("Starting chatter thread")
                 self.chatter = threading.Thread(target=self.chat_worker.init_icons, args=(self.partner, self.chat_worker.main_loop))
+                self.chatter.daemon = True
                 self.chatter.start()
                 self.chat_connected = True
                 self.chat_connect.setText("Disconnect")

@@ -485,13 +485,18 @@ class Chat:
                                                 .format(self.get_timestamp(), c_msg["message"])
                             self.signals.show_new_message.emit(display_msg)
                         elif c_msg["sender"] == "twitchnotify":
-                            sub_badge = self.badge_html(self.badges["subscriber"])
+                            try:
+                                sub_badge = self.badge_html(self.badges["subscriber"])
+                            except KeyError:
+                                continue
                             display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {} <span style="color: #858585;">{}</div>'\
                                     .format(self.get_timestamp(), sub_badge, c_msg["message"])
                             self.signals.show_new_message(display_msg)
                         else:
                             self.signals.show_new_message.emit(self.parse_msg(c_msg))
+                    else:
+                        print current_message
                 message = msg_list[0]
             except Exception, e:
                 logging.exception(e)
-                continue
+                raise
