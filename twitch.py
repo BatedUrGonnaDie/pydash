@@ -12,7 +12,6 @@ import time
 import requests
 
 if hasattr(sys, "frozen"):
-    print 'yes'
     os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
 class API:
@@ -359,7 +358,7 @@ class Chat:
                 for i in tmp:
                     emotes_long.append({k : i})
 
-        emotes_sorted = sorted(emotes_long, key=lambda k: int(k.values()[0].split('-')[0]), reverse=True) 
+        emotes_sorted = sorted(emotes_long, key=lambda k: int(k.values()[0].split('-')[0]), reverse=True)
         for i in emotes_sorted:
             for k, v in i.iteritems():
                 emote_url = "http://static-cdn.jtvnw.net/emoticons/v1/{}/1.0".format(k)
@@ -390,14 +389,12 @@ class Chat:
         text_color = "#000000"
         offset = False
         if msg_dict["message"].startswith("\x01ACTION "):
-            offset = True
+            msg_dict["message"] = msg_dict["message"][7:-1]
             text_color = msg_dict["tags"]["color"]
         badges = self.twitch_badges(msg_dict)
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
-        if offset:
-            twitch_ffz_msg = twitch_ffz_msg[7:-1]
-        else:
+        if not offset:
             twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
