@@ -11,6 +11,8 @@ import time
 
 import requests
 
+import user
+
 if hasattr(sys, "frozen"):
     os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
@@ -112,6 +114,7 @@ class Chat:
         self.running = False
         self.user_irc_tags = {}
         self.sender_badge_template = ""
+        self.chatters = {}
         self.badges = {}
         self.emotes_dict = {}
         self.ffz_url = "http://cdn.frankerfacez.com/channel"
@@ -340,6 +343,17 @@ class Chat:
 
         return badges
 
+    def get_username(self, username):
+        try:
+            return self.chatters[username].display_name
+        except KeyError:
+            try:
+                user_object = requests.get("https://api.twitch.tv/kraken/users/" + username).json()
+            except ValueError:
+                return username
+            self.chatters[username] = user.User(username, user_object["display_name"])
+            return self.chatters[username].display_name
+
     def twitch_emote_parse(self, msg, e_tags):
         if not e_tags["emotes"]:
             return msg
@@ -392,13 +406,14 @@ class Chat:
             msg_dict["message"] = msg_dict["message"][7:-1]
             text_color = msg_dict["tags"]["color"]
         badges = self.twitch_badges(msg_dict)
+        username = self.get_username(msg_dict["sender"].lower())
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
         if not offset:
             twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
-                    .decode("utf-8").format(msg_time, badges, msg_dict["tags"]["color"], msg_dict["sender"], text_color, twitch_ffz_msg)
+                    .decode("utf-8").format(msg_time, badges, msg_dict["tags"]["color"], username, text_color, twitch_ffz_msg)
         return final_msg
 
     def get_timestamp(self):
