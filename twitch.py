@@ -12,11 +12,12 @@ import time
 import requests
 
 import user
+from async_dec import async_function
 
 if hasattr(sys, "frozen"):
     os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
-class API:
+class API(object):
 
     def __init__(self, token, channel = ""):
         self.oauth_token = token
@@ -105,7 +106,7 @@ class API:
                 self.last_commercial = int(time.time())
             return success
 
-class Chat:
+class Chat(object):
 
     def __init__(self, name, oauth, signals):
         self.channel = name
@@ -343,16 +344,14 @@ class Chat:
 
         return badges
 
-    def get_username(self, username):
+    @async_function
+    def set_display_name(self, username):
         try:
-            return self.chatters[username].display_name
-        except KeyError:
-            try:
-                user_object = requests.get("https://api.twitch.tv/kraken/users/" + username).json()
-            except ValueError:
-                return username
-            self.chatters[username] = user.User(username, user_object["display_name"])
-            return self.chatters[username].display_name
+            user_object = requests.get("https://api.twitch.tv/kraken/users/" + username).json()
+            self.chatters[username].display_name = user_object["display_name"]
+        except ValueError, e:
+            logging.exception(e)
+        return
 
     def twitch_emote_parse(self, msg, e_tags):
         if not e_tags["emotes"]:
@@ -400,20 +399,28 @@ class Chat:
         return msg
 
     def parse_msg(self, msg_dict):
+        try:
+            chatter_obj = self.chatters[msg_dict["sender"].lower()]
+            username = chatter_obj.display_name if chatter_obj.display_name is not None else chatter_obj.name
+        except KeyError:
+            chatter_obj = user.User(username=msg_dict["sender"], chat_color=msg_dict["tags"]["color"])
+            self.chatters[msg_dict["sender"].lower()] = chatter_obj
+            self.set_display_name(msg_dict["sender"].lower())
+            username = msg_dict["sender"]
         text_color = "#000000"
         offset = False
         if msg_dict["message"].startswith("\x01ACTION "):
+            offset = True
             msg_dict["message"] = msg_dict["message"][7:-1]
-            text_color = msg_dict["tags"]["color"]
+            text_color = chatter_obj.chat_color
         badges = self.twitch_badges(msg_dict)
-        username = self.get_username(msg_dict["sender"].lower())
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
         if not offset:
             twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
-                    .decode("utf-8").format(msg_time, badges, msg_dict["tags"]["color"], username, text_color, twitch_ffz_msg)
+                    .decode("utf-8").format(msg_time, badges, chatter_obj.chat_color, username, text_color, twitch_ffz_msg)
         return final_msg
 
     def get_timestamp(self):
