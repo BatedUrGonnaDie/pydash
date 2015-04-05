@@ -7,7 +7,7 @@ import webbrowser
 
 redirect_url = "https://leagueofnewbs.com/twitch/dashboard/out"
 
-class Configurer:
+class Configurer(object):
 
     def __init__(self):
         pass
