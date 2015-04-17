@@ -414,6 +414,8 @@ class Chat(object):
             msg_dict["message"] = msg_dict["message"][7:-1]
             text_color = chatter_obj.chat_color
         badges = self.twitch_badges(msg_dict)
+        if msg_dict["tags"]["color"] and msg_dict["tags"]["color"] != chatter_obj.chat_color:
+            chatter_obj.chat_color = msg_dict["tags"]["color"]
         twitch_e_msg = self.twitch_emote_parse(msg_dict["message"], msg_dict["tags"])
         twitch_ffz_msg = self.ffz_parse(twitch_e_msg)
         if not offset:

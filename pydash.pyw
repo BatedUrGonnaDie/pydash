@@ -152,6 +152,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
         if self.games_list:
             self.game_completer = QtGui.QCompleter(self.games_list, self.game)
             self.game_completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+            self.game_completer.setModelSorting(QtGui.QCompleter.CaseSensitivelySortedModel)
             self.game.setCompleter(self.game_completer)
 
     def connect_to_chat(self):
