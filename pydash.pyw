@@ -122,6 +122,10 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                     self.authorized = True
                     self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                     self.user_config = self.configure.set_param("oauth", oauth)
+                    if not self.user_config["twitch_id"]:
+                        twitch_id = self.api_worker.get_twitch_id(info["token"]["user_name"])
+                        if twitch_id:
+                            self.configure.set_param("twitch_id", twitch_id)
                     self.signals.nick_set.emit(info["token"]["user_name"])
                     self.api_worker.channel = self.user_config["channel"]
                     self.auth_input.setReadOnly(True)
@@ -278,14 +282,15 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                     else:
                         self.live = False
                         self.viewer_number.setText('0')
-                hosters_obj = self.api_worker.get_hosting_object()
-                if hosters_obj:
-                    hosters = [i.values()[0] for i in hosters_obj["hosts"]]
-                    if hosters:
-                        hosters_string = ", ".join(hosters)
-                        self.set_status_hosts(hosters_string)
-                    else:
-                        self.set_status_hosts("None")
+                if self.user_config["twitch_id"]
+                    hosters_obj = self.api_worker.get_hosting_object(self.user_config["twitch_id"])
+                    if hosters_obj:
+                        hosters = [i.values()[0] for i in hosters_obj["hosts"]]
+                        if hosters:
+                            hosters_string = ", ".join(hosters)
+                            self.set_status_hosts(hosters_string)
+                        else:
+                            self.set_status_hosts("None")
 
                 current_time = int(time.time())
                 if self.chat_connected and self.last_message < (current_time + 60):

@@ -37,6 +37,11 @@ class API(object):
         else:
             return False
 
+    def get_twitch_id(self, username):
+        endpoint = "/channels/{}".format(username)
+        info = self.api_call("get", endpoint)
+        return info
+
     def check_partner_status(self):
         endpoint = "/user"
         info = self.api_call("get", endpoint = endpoint)
@@ -93,8 +98,8 @@ class API(object):
         else:
             return False
 
-    def get_hosting_object(self):
-        hosters = requests.get("https://chatdepot.twitch.tv/rooms/{}/hosts".format(self.channel))
+    def get_hosting_object(self, twitch_id):
+        hosters = requests.get("https://http://tmi.twitch.tv/hosts?include_logins=1&target={}".format(twitch_id))
         return self.json_decode(hosters)
 
     def run_commercial(self, length):
@@ -267,7 +272,7 @@ class Chat(object):
 
     def set_sender_badges(self):
         try:
-            self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emotesets"]).json()
+            self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emote-sets"]).json()
         except Exception:
             self.set_sender_badges()
         self.sender_badge_template = self.twitch_badges({"tags": self.user_irc_tags, "sender": self.channel})
@@ -327,14 +332,14 @@ class Chat(object):
 
         if msg_dict["sender"] == self.channel:
             badges += self.badge_html(self.badges["broadcaster"])
-        elif m_tags["user_type"]:
-            if m_tags["user_type"] == "staff":
+        elif m_tags["user-type"]:
+            if m_tags["user-type"] == "staff":
                 badges += self.badge_html(self.badges["staff"])
-            elif m_tags["user_type"] == "admin":
+            elif m_tags["user-type"] == "admin":
                 badges += self.badge_html(self.badges["admin"])
-            elif m_tags["user_type"] == "global_mod":
+            elif m_tags["user-type"] == "global_mod":
                 badges += self.badge_html(self.badges["global_mod"])
-            elif m_tags["user_type"] == "mod":
+            elif m_tags["user-type"] == "mod":
                 badges += self.badge_html(self.badges["mod"])
 
         if m_tags["turbo"] == '1':
@@ -403,10 +408,9 @@ class Chat(object):
             chatter_obj = self.chatters[msg_dict["sender"].lower()]
             username = chatter_obj.display_name if chatter_obj.display_name is not None else chatter_obj.name
         except KeyError:
-            chatter_obj = user.User(username=msg_dict["sender"], chat_color=msg_dict["tags"]["color"])
+            chatter_obj = user.User(username=msg_dict["sender"], chat_color=msg_dict["tags"]["color"], display_name=msg_dict["tags"]["display-name"])
             self.chatters[msg_dict["sender"].lower()] = chatter_obj
-            self.set_display_name(msg_dict["sender"].lower())
-            username = msg_dict["sender"]
+            username = chatter_obj.display_name
         text_color = "#000000"
         offset = False
         if msg_dict["message"].startswith("\x01ACTION "):
@@ -484,7 +488,7 @@ class Chat(object):
                         if msg_parts[0]:
                             c_msg["tags"] = dict(item.split('=') for item in msg_parts[0][1:].split(';'))
                         else:
-                            c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user_type": ""}
+                            c_msg["tags"] = {"color": "", "emotes": {}, "subscriber": 0, "turbo": 0, "user-type": ""}
                         c_msg["sender"] = msg_parts[1][1:].split('!')[0]
                         c_msg["action"] = msg_parts[2]
                         c_msg["channel"] = msg_parts[3]
@@ -499,12 +503,10 @@ class Chat(object):
                                 new_color = jtv_parts[2].split("\r\n")[0]
                                 self.user_irc_tags["color"] = new_color
                                 logging.info("Chat color set to: {}".format(new_color))
-                                display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">Your color has been changed.</div>'\
-                                                .format(self.get_timestamp())
                             else:
                                 display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
                                                 .format(self.get_timestamp(), c_msg["message"])
-                            self.signals.show_new_message.emit(display_msg)
+                                self.signals.show_new_message.emit(display_msg)
                         elif c_msg["sender"] == "twitchnotify":
                             try:
                                 sub_badge = self.badge_html(self.badges["subscriber"])
