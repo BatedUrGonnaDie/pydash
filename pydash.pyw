@@ -16,7 +16,7 @@ from pdashboard_gui     import Ui_pdt
 import twitch
 import configuration    as config
 
-scopes = ["user_read", "channel_editor", "channel_commercial", "chat_login"]
+scopes = sorted([u"user_read", u"channel_editor", u"channel_commercial", u"chat_login"])
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
@@ -118,7 +118,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                 logging.exception(e)
                 self.check_code()
             if info:
-                if info["token"]["valid"] and info["token"]["authorization"]["scopes"] == scopes:
+                if info["token"]["valid"] and sorted(info["token"]["authorization"]["scopes"]) == scopes:
                     self.authorized = True
                     self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                     self.user_config = self.configure.set_param("oauth", oauth)
@@ -282,7 +282,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                     else:
                         self.live = False
                         self.viewer_number.setText('0')
-                if self.user_config["twitch_id"]
+                if self.user_config["twitch_id"]:
                     hosters_obj = self.api_worker.get_hosting_object(self.user_config["twitch_id"])
                     if hosters_obj:
                         hosters = [i.values()[0] for i in hosters_obj["hosts"]]
