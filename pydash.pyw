@@ -123,7 +123,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                     self.user_config = self.configure.set_param("channel", info["token"]["user_name"])
                     self.user_config = self.configure.set_param("oauth", oauth)
                     if not self.user_config["twitch_id"]:
-                        twitch_id = self.api_worker.get_twitch_id(info["token"]["user_name"])
+                        twitch_id = self.api_worker.get_twitch_id(info["token"]["user_name"])["_id"]
                         if twitch_id:
                             self.configure.set_param("twitch_id", twitch_id)
                     self.signals.nick_set.emit(info["token"]["user_name"])
@@ -284,7 +284,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
                         self.viewer_number.setText('0')
                 if self.user_config["twitch_id"]:
                     hosters_obj = self.api_worker.get_hosting_object(self.user_config["twitch_id"])
-                    if hosters_obj:
+                    if hosters_obj and hosters_obj["hosts"]:
                         hosters = [i.values()[0] for i in hosters_obj["hosts"]]
                         if hosters:
                             hosters_string = ", ".join(hosters)

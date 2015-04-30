@@ -99,7 +99,7 @@ class API(object):
             return False
 
     def get_hosting_object(self, twitch_id):
-        hosters = requests.get("https://http://tmi.twitch.tv/hosts?include_logins=1&target={}".format(twitch_id))
+        hosters = requests.get("https://tmi.twitch.tv/hosts?include_logins=1&target={}".format(twitch_id))
         return self.json_decode(hosters)
 
     def run_commercial(self, length):
