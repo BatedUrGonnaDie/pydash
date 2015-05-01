@@ -5,7 +5,7 @@ import json
 import logging
 import webbrowser
 
-redirect_url = "https://leagueofnewbs.com/twitch/dashboard/out"
+redirect_url = "https://leagueofnewbs.com/twitch/pydash/out"
 
 class Configurer(object):
 
