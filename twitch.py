@@ -12,7 +12,6 @@ import time
 import requests
 
 import user
-from async_dec import async_function
 
 if hasattr(sys, "frozen"):
     os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
@@ -348,15 +347,6 @@ class Chat(object):
             badges += self.badge_html(self.badges["subscriber"])
 
         return badges
-
-    @async_function
-    def set_display_name(self, username):
-        try:
-            user_object = requests.get("https://api.twitch.tv/kraken/users/" + username).json()
-            self.chatters[username].display_name = user_object["display_name"]
-        except ValueError, e:
-            logging.exception(e)
-        return
 
     def twitch_emote_parse(self, msg, e_tags):
         if not e_tags["emotes"]:
