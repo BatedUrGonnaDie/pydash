@@ -202,7 +202,7 @@ class Chat(object):
     def connect(self):
         logging.info("Connecting to Twitch")
         twitch_host = "irc.twitch.tv"
-        twitch_port = 443
+        twitch_port = 6667
         self.irc = socket.socket()
         self.irc.settimeout(600)
         self.irc.connect((twitch_host, twitch_port))
