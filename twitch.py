@@ -301,7 +301,7 @@ class Chat(object):
                         msg = re.sub(i["code"], emote_replace, msg)
         msg = self.ffz_parse(msg)
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span>: {}</div>'\
-                    .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, msg.decode("utf-8"))
+                    .decode("utf-8").format(msg_time, self.sender_badge_template, self.user_irc_tags["color"], self.channel, self.escape_html(msg.decode("utf-8")))
         self.signals.show_new_message.emit(final_msg)
         return True
 
@@ -393,6 +393,9 @@ class Chat(object):
                 msg = msg.replace(i, emote_replace)
         return msg
 
+    def escape_html(self, msg):
+        return msg.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+
     def parse_msg(self, msg_dict):
         try:
             chatter_obj = self.chatters[msg_dict["sender"].lower()]
@@ -416,7 +419,7 @@ class Chat(object):
             twitch_ffz_msg = ": " + twitch_ffz_msg
         msg_time = self.get_timestamp()
         final_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> {}<span style="color: {};">{}</span><span style="color: {};">{}</span></div>'\
-                    .decode("utf-8").format(msg_time, badges, chatter_obj.chat_color, username, text_color, twitch_ffz_msg)
+                    .decode("utf-8").format(msg_time, badges, chatter_obj.chat_color, username, text_color, self.escape_html(twitch_ffz_msg))
         return final_msg
 
     def get_timestamp(self):
