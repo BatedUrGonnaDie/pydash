@@ -294,8 +294,11 @@ class Dashboard(QtGui.QMainWindow, Ui_pdt):
 
                 current_time = int(time.time())
                 if self.chat_connected and self.last_message < (current_time + 60):
-                    self.chat_worker.send_ping()
-                    self.last_message = current_time
+                    try:
+                        self.chat_worker.send_ping()
+                        self.last_message = current_time
+                    except Exception:
+                        pass
 
             self.signals.update_status.emit()
             time.sleep(60)
