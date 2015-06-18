@@ -12,7 +12,7 @@ import PySide.QtCore    as QtCore
 import PySide.QtGui     as QtGui
 from PySide             import QtSvg, QtXml
 
-from pdashboard_gui     import Ui_pdt
+from pydash_gui     import Ui_pydash
 import twitch
 import configuration    as config
 
@@ -37,7 +37,7 @@ class SignalCollection(QtCore.QObject):
     show_new_message = QtCore.Signal(str)
     update_msg_time  = QtCore.Signal(str)
 
-class Dashboard(QtGui.QMainWindow, Ui_pdt):
+class Dashboard(QtGui.QMainWindow, Ui_pydash):
 
     def __init__(self, parent = None):
         super(Dashboard, self).__init__(parent)
