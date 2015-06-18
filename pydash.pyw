@@ -93,7 +93,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
         if self.user_config["debug"]:
             logging.basicConfig(filename='debug.log', filemode='w', level=logging.DEBUG)
 
-        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], 850, 390)
+        self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], self.user_config["size"][0], self.user_config["size"][1])
         self.signals.update_status.emit()
         self.signals.update_hosts.emit("None")
 
@@ -318,7 +318,9 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
                 pass
 
         position = [self.pos().x(), self.pos().y()]
+        size = [self.size().width(), self.size().height()]
         self.user_config = self.configure.set_param("position", (position))
+        self.user_config = self.configure.set_param("size", (size))
         QtGui.QMainWindow.closeEvent(self, event)
 
 
@@ -327,6 +329,5 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     window = Dashboard()
     window.show()
-    window.setFixedSize(window.size())
     window.set_completer()
     sys.exit(app.exec_())
