@@ -396,7 +396,6 @@ class Chat(object):
     def escape_html(self, msg):
         msg = re.sub("(?<!/)>", "&#62;", msg)
         msg = re.sub("<(?!i)", "&#60;", msg)
-        print msg
         return msg
 
     def parse_msg(self, msg_dict):
