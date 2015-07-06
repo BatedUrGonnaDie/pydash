@@ -179,7 +179,7 @@ class Chat(object):
                 mod_url = "http://chat-badges.s3.amazonaws.com/mod.png"
             self.save_chat_badges(mod_url, "mod", "images/mod_icon.png")
 
-        if not os.path.exists("images/broadcaster_icon.png"):
+        if not os.path.exists("images/staff.png"):
             staff_url = "http://chat-badges.s3.amazonaws.com/staff.png"
             self.save_chat_badges(staff_url, "staff", "images/staff_icon.png")
 
