@@ -91,7 +91,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
 
         self.user_config = self.configure.load_file()
         if self.user_config["debug"]:
-            logging.basicConfig(filename='debug.log', filemode='w', level=logging.DEBUG)
+            logging.basicConfig(filename='debug.log', filemode='w', level=logging.INFO)
 
         self.setGeometry(self.user_config["position"][0], self.user_config["position"][1], self.user_config["size"][0], self.user_config["size"][1])
         self.signals.update_status.emit()

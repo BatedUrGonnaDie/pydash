@@ -61,11 +61,11 @@ class API(object):
 
         try:
             if method == "get":
-                info = requests.get(url, headers = self.headers)
+                info = requests.get(url, headers=self.headers)
             elif method == "post":
-                info = requests.post(url ,headers = self.headers, data = data)
+                info = requests.post(url, headers=self.headers, data=data)
             elif method == "put":
-                info = requests.put(url, headers = self.headers, data = data)
+                info = requests.put(url, headers=self.headers, data=data)
             else:
                 raise Exception
             info.raise_for_status()
@@ -91,7 +91,7 @@ class API(object):
 
     def get_stream_object(self):
         endpoint = "/streams/" + self.channel
-        info = self.api_call("get", endpoint = endpoint)
+        info = self.api_call("get", endpoint=endpoint)
         if info:
             return info
         else:
@@ -167,7 +167,7 @@ class Chat(object):
             self.save_chat_badges(url, key, f_name)
 
     def get_chat_badges(self):
-        logging.info("Retrieving Chat Badges")
+        logging.debug("Retrieving Chat Badges")
         if not os.path.exists("images/broadcaster_icon.png"):
             bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
             self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
@@ -193,20 +193,20 @@ class Chat(object):
         logging.info("Chat Badges Downloaded")
 
     def get_sub_badge(self):
-        logging.info("Retrieving Sub Badge")
+        logging.debug("Retrieving Sub Badge")
         url = "https://api.twitch.tv/kraken/chat/{}/badges".format(self.channel)
         badge_links = requests.get(url)
         self.save_chat_badges(badge_links["subscriber"]["image"], "subscriber", "images/sub_icon.png")
         logging.info("Sub Badge Downloaded")
 
     def connect(self):
-        logging.info("Connecting to Twitch")
+        logging.debug("Connecting to Twitch")
         twitch_host = "irc.twitch.tv"
         twitch_port = 6667
         self.irc = socket.socket()
         self.irc.settimeout(600)
         self.irc.connect((twitch_host, twitch_port))
-        logging.info("Connection Complete")
+        logging.debug("Connection Complete")
 
     def irc_disconnect(self):
         try:
@@ -221,13 +221,13 @@ class Chat(object):
         return
 
     def send_irc_auth(self):
-        logging.info("Sending Authentication")
+        logging.debug("Sending Authentication")
         self.irc.sendall("PASS {}\r\n".format(self.oauth))
         self.irc.sendall("NICK {}\r\n".format(self.channel))
-        logging.info("Authentication Sent")
+        logging.debug("Authentication Sent")
 
     def join_channel(self):
-        logging.info("Joining Channel and Getting Tags")
+        logging.debug("Joining Channel and Getting Tags")
         self.irc.sendall("JOIN #{}\r\n".format(self.channel))
         join_info = self.irc.recv(4096)
         join_lines = join_info.split("\r\n")
@@ -241,20 +241,20 @@ class Chat(object):
         except KeyError:
             self.irc.sendall("PART #batedurgonnadie")
             self.join_channel()
-        logging.info("Joined Channel and Requested Tags")
+        logging.debug("Joined Channel and Requested Tags")
 
     def establish_connection(self):
         self.connect()
         self.send_irc_auth()
         success = self.irc.recv(4096)
-        logging.info("Retrieving Initial Messages")
+        logging.debug("Retrieving Initial Messages")
         if success == ":tmi.twitch.tv NOTICE * :Login unsuccessful\r\n":
             logging.error("Oauth failed to login user")
             raise Exception
         self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
         self.irc.recv(1024)
         self.join_channel()
-        self.set_sender_badges()
+        self.set_sender_badges(2)
 
     def re_establish_connection(self):
         try:
@@ -262,18 +262,21 @@ class Chat(object):
         except Exception:
             pass
         self.connect()
+        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
+        time.sleep(.1)
+        self.irc.recv(1024)
         self.send_irc_auth()
         self.irc.recv(4096)
-        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
-        self.irc.recv(1024)
         self.join_channel()
         return
 
-    def set_sender_badges(self):
+    def set_sender_badges(self, sleeper):
         try:
             self.user_emotes = requests.get("https://api.twitch.tv/kraken/chat/emoticon_images?on_site=1&emotesets=" + self.user_irc_tags["emote-sets"]).json()
         except Exception:
-            self.set_sender_badges()
+            sleeper = sleeper ** 2
+            time.sleep(sleeper)
+            self.set_sender_badges(sleeper)
         self.sender_badge_template = self.twitch_badges({"tags": self.user_irc_tags, "sender": self.channel})
 
     def send_msg(self, txt):
@@ -435,7 +438,6 @@ class Chat(object):
         self.establish_connection()
         self.running = True
         self.emit_status_msg("Connected to chat!")
-        logging.info("Entering main_loop while loop")
         message = ""
         while self.running:
             try:
@@ -497,7 +499,7 @@ class Chat(object):
                             if jtv_parts[0] == "USERCOLOR":
                                 new_color = jtv_parts[2].split("\r\n")[0]
                                 self.user_irc_tags["color"] = new_color
-                                logging.info("Chat color set to: {}".format(new_color))
+                                logging.debug("Chat color set to: {}".format(new_color))
                             else:
                                 display_msg = '<div style="margin-top: 2px; margin-bottom: 2px;"><span style="font-size: 6pt;">{}</span> <span style="color: #858585;">{}</div>'\
                                                 .format(self.get_timestamp(), c_msg["message"])
