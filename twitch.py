@@ -23,10 +23,10 @@ class API(object):
         self.channel = channel
         self.base_url = "https://api.twitch.tv/kraken"
         self.last_commercial = 0
-        self.headers = {}
+        self.headers = {"Accept" : "appliaction/vnd.twitchtv.v3+json", "Authorization": None}
 
-    def set_headers(self, oauth):
-        self.headers = {"Accept" : "application/vnd.twitchtv.v3+json", "Authorization" : "OAuth " + oauth}
+    def set_oauth_header(self, oauth):
+        self.headers["Authorization"] = "OAuth " + oauth
 
     def check_auth_status(self):
         endpoint = '/'
@@ -77,7 +77,7 @@ class API(object):
 
     def get_gt(self):
         endpoint = "/channels/" + self.channel
-        info = self.api_call("get", endpoint = endpoint)
+        info = self.api_call("get", endpoint=endpoint)
         if info:
             return info["status"], info["game"]
         else:
@@ -518,5 +518,5 @@ class Chat(object):
                         print current_message
                 message = msg_list[0]
             except Exception, e:
+                self.re_establish_connection()
                 logging.exception(e)
-                raise
