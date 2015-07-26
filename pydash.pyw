@@ -111,7 +111,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
         if not self.authorized:
             oauth = self.auth_input.text()
             self.api_worker = twitch.API(oauth)
-            self.api_worker.set_headers(oauth)
+            self.api_worker.set_oauth_header(oauth)
             try:
                 info = self.api_worker.check_auth_status()
             except Exception, e:
@@ -285,7 +285,7 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
                 if self.user_config["twitch_id"]:
                     hosters_obj = self.api_worker.get_hosting_object(self.user_config["twitch_id"])
                     if hosters_obj and hosters_obj["hosts"]:
-                        hosters = [i.values()[0] for i in hosters_obj["hosts"]]
+                        hosters = [i["host_login"] for i in hosters_obj["hosts"]]
                         if hosters:
                             hosters_string = ", ".join(hosters)
                             self.set_status_hosts(hosters_string)
