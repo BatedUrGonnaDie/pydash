@@ -13,8 +13,8 @@ import requests
 
 import user
 
-if hasattr(sys, "frozen"):
-    os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
+os.environ["REQUESTS_CA_BUNDLE"] = os.path.join(getattr(sys, "_MEIPASS", os.path.abspath(".")), "cacert.pem")
+logging.error(os.environ["REQUESTS_CA_BUNDLE"])
 
 class API(object):
 
@@ -30,7 +30,7 @@ class API(object):
 
     def check_auth_status(self):
         endpoint = '/'
-        info = self.api_call("get", endpoint = endpoint)
+        info = self.api_call("get", endpoint=endpoint)
         if info:
             return info
         else:
@@ -144,19 +144,6 @@ class Chat(object):
         logging.info("Launching main loop from init_icons")
         start_loop_func()
 
-    # def ffz_check(self):
-    #     url = "{}/{}.css".format(self.ffz_url, self.channel)
-    #     data = requests.get(url)
-    #     if data.status_code == 200:
-    #         if data.text.endswith("!important"):
-    #             self.custom_mod = True
-
-    #         emotes = re.findall('{content:"(.+?)";', data.text)
-    #         for i in emotes:
-    #             self.ffz_emotes.append(i)
-    #     else:
-    #         logging.info("FFZ did not return a 200.")
-
     def ffz_user_check(self):
         try:
             url = "{}/room/{}".format(self.ffz_url, self.channel)
@@ -183,6 +170,17 @@ class Chat(object):
         except Exception, e:
             logging.exception(e)
             self.ffz_global_check()
+
+    def ffz_ff_check(self):
+        try:
+            url = "https://cdn.frankerfacez.com/script/event.json"
+            data = requests.get(url)
+            data.raise_for_status()
+            data_decode = data.json()
+            # need example response
+        except Exception, e:
+            logging.exception(e)
+            self.ffz_ff_check()
 
     def save_chat_badges(self, url, key, f_name):
         try:
