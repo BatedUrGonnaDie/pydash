@@ -704,6 +704,12 @@ and Title</string>
           <bold>true</bold>
          </font>
         </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="acceptDrops">
+         <bool>false</bool>
+        </property>
         <property name="textInteractionFlags">
          <set>Qt::TextSelectableByMouse</set>
         </property>
@@ -767,6 +773,25 @@ and Title</string>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
+ <tabstops>
+  <tabstop>auth_input</tabstop>
+  <tabstop>authorize_button</tabstop>
+  <tabstop>nick</tabstop>
+  <tabstop>oauth_get</tabstop>
+  <tabstop>ad_30</tabstop>
+  <tabstop>ad_60</tabstop>
+  <tabstop>ad_90</tabstop>
+  <tabstop>ad_120</tabstop>
+  <tabstop>ad_150</tabstop>
+  <tabstop>ad_180</tabstop>
+  <tabstop>chat_connect</tabstop>
+  <tabstop>game</tabstop>
+  <tabstop>title</tabstop>
+  <tabstop>update_game_title</tabstop>
+  <tabstop>refresh</tabstop>
+  <tabstop>chat_send</tabstop>
+  <tabstop>send_message</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
