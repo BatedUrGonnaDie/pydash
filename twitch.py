@@ -122,7 +122,8 @@ class Chat(object):
         self.chatters = {}
         self.badges = {}
         self.emotes_dict = {}
-        self.ffz_url = "http://cdn.frankerfacez.com/channel"
+        self.ffz_url = "https://api.frankerfacez.com/v1"
+        self.ffz_cdn = "http://cdn.frankerfacez.com/channel"
         self.ffz_emotes = []
         self.ffz_g_emotes = ["BeanieHipster", "LilZ", "ManChicken", "YellowFever", "YooHoo", "ZreknarF"]
         self.ffz_dict = {}
@@ -134,7 +135,8 @@ class Chat(object):
 
     def init_icons(self, partner, start_loop_func):
         logging.info("Init icons started")
-        self.ffz_check()
+        self.ffz_user_check()
+        self.ffz_global_check()
         self.get_chat_badges()
         if partner and not os.path.exists("images/sub_icon.png"):
             self.get_sub_badge()
@@ -142,18 +144,45 @@ class Chat(object):
         logging.info("Launching main loop from init_icons")
         start_loop_func()
 
-    def ffz_check(self):
-        url = "{}/{}.css".format(self.ffz_url, self.channel)
-        data = requests.get(url)
-        if data.status_code == 200:
-            if data.text.endswith("!important"):
-                self.custom_mod = True
+    # def ffz_check(self):
+    #     url = "{}/{}.css".format(self.ffz_url, self.channel)
+    #     data = requests.get(url)
+    #     if data.status_code == 200:
+    #         if data.text.endswith("!important"):
+    #             self.custom_mod = True
 
-            emotes = re.findall('{content:"(.+?)";', data.text)
-            for i in emotes:
-                self.ffz_emotes.append(i)
-        else:
-            logging.info("FFZ did not return a 200.")
+    #         emotes = re.findall('{content:"(.+?)";', data.text)
+    #         for i in emotes:
+    #             self.ffz_emotes.append(i)
+    #     else:
+    #         logging.info("FFZ did not return a 200.")
+
+    def ffz_user_check(self):
+        try:
+            url = "{}/room/{}".format(self.ffz_url, self.channel)
+            data = requests.get(url)
+            data.raise_for_status()
+            data_decode = data.json()
+            set_id = data_decode["room"]["set"]
+            for i in data_decode["sets"][str(set_id)]["emoticons"]:
+                self.ffz_emotes.append({"name": i["name"], "url": "https:{}".format(i["urls"]["1"])})
+        except Exception, e:
+            logging.exception(e)
+            self.ffz_user_check()
+
+    def ffz_global_check(self):
+        try:
+            url = "{}/set/global".format(self.ffz_url)
+            data = requests.get(url)
+            data.raise_for_status()
+            data_decode = data.json()
+            set_ids = data_decode["default_sets"]
+            for i in set_ids:
+                for j in data_decode["sets"][str(i)]["emoticons"]:
+                    self.ffz_emotes.append({"name": j["name"], "url": "https:{}".format(j["urls"]["1"])})
+        except Exception, e:
+            logging.exception(e)
+            self.ffz_global_check()
 
     def save_chat_badges(self, url, key, f_name):
         try:
@@ -313,17 +342,21 @@ class Chat(object):
             image_file = e_dict[key]
         except KeyError:
             print url
-            try:
-                image = requests.get(url, stream=True)
-                image.raise_for_status()
-                with open("images/" + key + ".png", 'wb') as i_file:
-                    image.raw.decode_content = True
-                    shutil.copyfileobj(image.raw, i_file)
-                image_file = e_dict[key] = "images/" + key + ".png"
-            except Exception:
-                logging.error("Error getting emote image from cdn")
-                image_file = key
+            image_file = e_dict[key] = self.download_image(url, key)
+
         return image_file
+
+    def download_image(self, url, name):
+        try:
+            image = requests.get(url, stream=True)
+            image.raise_for_status()
+            with open("images/{0}.png".format(name), "wb") as i_file:
+                image.raw.decode_content = True
+                shutil.copyfileobj(image.raw, i_file)
+            return "images/{}.png".format(name)
+        except Exception, e:
+            logging.exception(e)
+            return name
 
     def badge_html(self, badge_file):
         return '<img src="{}" height="18" width="18" /> '.format(badge_file)
@@ -382,18 +415,12 @@ class Chat(object):
 
     def ffz_parse(self, msg):
         for i in self.ffz_emotes:
-            if i in msg:
-                emote_url = self.ffz_url + '/' + self.channel + '/' + i + ".png"
-                image_file = self.get_emote_key(i, self.ffz_dict, emote_url)
+            if i["name"] in msg:
+                emote_url = i["url"]
+                image_file = self.get_emote_key(i["name"], self.ffz_dict, emote_url)
                 emote_replace = '<img src="{}" />'.format(image_file)
-                msg = msg.replace(i, emote_replace)
+                msg = msg.replace(i["name"], emote_replace)
 
-        for i in self.ffz_g_emotes:
-            if i in msg:
-                emote_url = "{}/global/{}.png".format(self.ffz_url, i)
-                image_file = self.get_emote_key(i, self.ffz_dict, emote_url)
-                emote_replace = '<img src="{}" />'.format(image_file)
-                msg = msg.replace(i, emote_replace)
         return msg
 
     def escape_html(self, msg):
