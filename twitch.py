@@ -153,6 +153,8 @@ class Chat(object):
             set_id = data_decode["room"]["set"]
             for i in data_decode["sets"][str(set_id)]["emoticons"]:
                 self.ffz_emotes.append({"name": i["name"], "url": "https:{}".format(i["urls"]["1"])})
+        except requests.exceptions.SSLError, e:
+            logging.exception(e)
         except Exception, e:
             logging.exception(e)
             self.ffz_user_check()
@@ -167,6 +169,8 @@ class Chat(object):
             for i in set_ids:
                 for j in data_decode["sets"][str(i)]["emoticons"]:
                     self.ffz_emotes.append({"name": j["name"], "url": "https:{}".format(j["urls"]["1"])})
+        except requests.exceptions.SSLError, e:
+            logging.exception(e)
         except Exception, e:
             logging.exception(e)
             self.ffz_global_check()
