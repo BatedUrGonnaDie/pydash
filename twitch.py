@@ -13,8 +13,8 @@ import requests
 
 import user
 
-os.environ["REQUESTS_CA_BUNDLE"] = os.path.join(getattr(sys, "_MEIPASS", os.path.abspath(".")), "cacert.pem")
-logging.error(os.environ["REQUESTS_CA_BUNDLE"])
+if hasattr(sys, "frozen"):
+    os.environ["REQUESTS_CA_BUNDLE"] = os.path.join(getattr(sys, "_MEIPASS", os.path.abspath(".")), "cacert.pem")
 
 class API(object):
 
