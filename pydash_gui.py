@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'pydash_gui.ui'
 #
-# Created: Thu Jun 18 10:56:21 2015
+# Created: Thu Aug 13 22:23:58 2015
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -377,6 +377,8 @@ class Ui_pydash(object):
         font.setWeight(75)
         font.setBold(True)
         self.chat_box.setFont(font)
+        self.chat_box.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.chat_box.setAcceptDrops(False)
         self.chat_box.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         self.chat_box.setObjectName("chat_box")
         self.chat_layout.addWidget(self.chat_box)
@@ -418,6 +420,22 @@ class Ui_pydash(object):
 
         self.retranslateUi(pydash)
         QtCore.QMetaObject.connectSlotsByName(pydash)
+        pydash.setTabOrder(self.auth_input, self.authorize_button)
+        pydash.setTabOrder(self.authorize_button, self.nick)
+        pydash.setTabOrder(self.nick, self.oauth_get)
+        pydash.setTabOrder(self.oauth_get, self.ad_30)
+        pydash.setTabOrder(self.ad_30, self.ad_60)
+        pydash.setTabOrder(self.ad_60, self.ad_90)
+        pydash.setTabOrder(self.ad_90, self.ad_120)
+        pydash.setTabOrder(self.ad_120, self.ad_150)
+        pydash.setTabOrder(self.ad_150, self.ad_180)
+        pydash.setTabOrder(self.ad_180, self.chat_connect)
+        pydash.setTabOrder(self.chat_connect, self.game)
+        pydash.setTabOrder(self.game, self.title)
+        pydash.setTabOrder(self.title, self.update_game_title)
+        pydash.setTabOrder(self.update_game_title, self.refresh)
+        pydash.setTabOrder(self.refresh, self.chat_send)
+        pydash.setTabOrder(self.chat_send, self.send_message)
 
     def retranslateUi(self, pydash):
         pydash.setWindowTitle(QtGui.QApplication.translate("pydash", "PyDash", None, QtGui.QApplication.UnicodeUTF8))
