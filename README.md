@@ -1,14 +1,19 @@
-Running
-=======
-To run locally all you need to do is download the latest release
+#Setting Up
+Clone the Repo, then follow OS specific instructions.
+#####Windows
+  1. `pip install -r requirements.txt`
 
-Development
-===========
-1. Fork the repo
-2. Clone locally
-3. Install requirements.txt
-4. Make you cool stuff
-5. Make pull request
+#####Ubuntu
+Tested using Ubuntu 14.03 LTS on python 2.7.6  
+  1. `sudo apt-get install python-pyside`
+  2. `sudo pip install -r requirements.txt`
+  3. If threading/SSL error: `sudo pip install requests[security]`
 
-If you would like to make any modifications to the GUI please edit the ui file
-with Qt Designer.
+#####Mac
+Not tested, might not be this easy.  
+  1. `brew install qt`
+  2. `sudo pip install -r requirements.txt`
+
+#OS Support
+This program is not thoroughly tested outside of windows.  If something
+doesn't work open an issue with the full error and steps to reproduce.
