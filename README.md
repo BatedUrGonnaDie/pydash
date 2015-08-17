@@ -12,7 +12,8 @@ Tested on the following platforms:
 1. Install binary for system as described: `https://wiki.qt.io/PySide_Binaries_Linux`
 2. `sudo pip install -U requests`
 3. If SSL warning/error is thrown: `sudo pip install requests[security]`
-(requires python-dev, libffi-dev, and libssl-dev packages.  Can also solve xcb threading error)
+(requires python-dev, libffi-dev, and libssl-dev packages)
+4. If you receive an xcb threading error, make sure pip is up to date then try step 2 again.
 
 #####Mac
 Using 10.10, Python >= 2.7.9 (thanks to rennsport for testing)  
