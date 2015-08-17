@@ -109,6 +109,9 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
     def check_code(self):
         if not self.authorized:
             oauth = self.auth_input.text()
+            if oauth == "":
+                self.signals.status_set.emit("Please actually enter and oauth token.")
+                return
             self.api_worker = twitch.API(oauth)
             self.api_worker.set_oauth_header(oauth)
             try:
