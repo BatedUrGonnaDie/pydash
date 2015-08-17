@@ -7,14 +7,13 @@ import sys
 import threading
 import time
 
-
 import PySide.QtCore    as QtCore
 import PySide.QtGui     as QtGui
-from PySide             import QtSvg, QtXml
+from   PySide           import QtSvg, QtXml
 
-from pydash_gui     import Ui_pydash
-import twitch
 import configuration    as config
+from   pydash_gui       import Ui_pydash
+import twitch
 
 scopes = sorted([u"user_read", u"channel_editor", u"channel_commercial", u"chat_login"])
 
@@ -183,30 +182,39 @@ class Dashboard(QtGui.QMainWindow, Ui_pydash):
                 self.signals.update_status.emit()
                 self.send_message.setEnabled(True)
 
+    @QtCore.Slot(str)
     def set_auth_text(self, text):
         self.auth_input.setText(text)
 
+    @QtCore.Slot(str)
     def set_nick_text(self, text):
         self.nick.setText(text)
 
+    @QtCore.Slot(str)
     def set_title_text(self, text):
         self.title.setPlainText(text)
 
+    @QtCore.Slot(str)
     def set_game_text(self, text):
         self.game.setText(text)
 
+    @QtCore.Slot(str)
     def status_temp_text(self, text):
         self.statusBar.showMessage(text)
 
+    @QtCore.Slot()
     def set_status_bools(self):
         self.status_bools.setText("Live: " + str(self.live))
 
+    @QtCore.Slot(str)
     def set_status_hosts(self, hosters):
         self.status_hosts.setText("Hosters: " + hosters)
 
+    @QtCore.Slot(str)
     def set_new_message(self, msg):
         self.chat_box.append(msg)
 
+    @QtCore.Slot(str)
     def update_last_message(self, time_sent):
         self.last_message = time_sent
 
