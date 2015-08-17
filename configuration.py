@@ -28,7 +28,7 @@ class Configurer(object):
             json.dump(user_object, config_file, sort_keys=True, indent=4, ensure_ascii=False, encoding="utf-8")
 
     def load_file(self):
-        user_default = {"channel": "", "oauth": "", "twitch_id": 0, "max_viewers": 0, "position": [0, 0], "size": [850, 390], "debug": True}
+        user_default = {"channel": "", "oauth": "", "twitch_id": 0, "max_viewers": 0, "position": [100, 50], "size": [850, 390], "debug": True}
         try:
             user_config = self.open_file('r')
             user_default.update(user_config)
