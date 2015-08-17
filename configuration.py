@@ -48,6 +48,8 @@ class Configurer(object):
             for i in range(len(games_list)):
                 games_list[i] = games_list[i][:-1]
             return games_list
+        except IOError:
+            return False
         except Exception, e:
             logging.exception(e)
             return False
