@@ -71,6 +71,9 @@ class API(object):
             info.raise_for_status()
             info_decode = self.json_decode(info)
             return info_decode
+        except requests.exceptions.HTTPError, e:
+            logging.exception(e)
+            return False
         except Exception, e:
             logging.exception(e)
             return False
@@ -106,6 +109,7 @@ class API(object):
             new_info = {"length" : length}
             endpoint = "/channels/{}/commercial".format(self.channel)
             success = self.api_call("post", endpoint, new_info)
+            logging.info(success)
             if success:
                 self.last_commercial = int(time.time())
             return success
@@ -202,6 +206,8 @@ class Chat(object):
         if not os.path.exists("images/broadcaster_icon.png"):
             bc_url = "http://chat-badges.s3.amazonaws.com/broadcaster.png"
             self.save_chat_badges(bc_url, "broadcaster", "images/broadcaster_icon.png")
+        else:
+            self.badges["broadcaster"] = "images/broadcaster_icon.png"
 
         if not os.path.exists("/images/mod_icon.png"):
             if self.custom_mod:
@@ -209,18 +215,27 @@ class Chat(object):
             else:
                 mod_url = "http://chat-badges.s3.amazonaws.com/mod.png"
             self.save_chat_badges(mod_url, "mod", "images/mod_icon.png")
+        else:
+            self.badges["mod"] = "images/mod_icon.png"
 
         if not os.path.exists("images/staff.png"):
             staff_url = "http://chat-badges.s3.amazonaws.com/staff.png"
             self.save_chat_badges(staff_url, "staff", "images/staff_icon.png")
+        else:
+            self.badges["staff"] = "images/staff_icon.png"
 
         if not os.path.exists("images/global_mod.png"):
             global_url = "http://chat-badges.s3.amazonaws.com/globalmod.png"
             self.save_chat_badges(global_url, "global_mod", "images/global_mod.png")
+        else:
+            self.badges["global_mod"] = "images/global_mod.png"
 
         if not os.path.exists("images/turbo_icon.png"):
             turbo_url = "http://chat-badges.s3.amazonaws.com/turbo.png"
             self.save_chat_badges(turbo_url, "turbo", "images/turbo_icon.png")
+        else:
+            self.badges["turbo"] = "images/turbo_icon.png"
+
         logging.info("Chat Badges Downloaded")
 
     def get_sub_badge(self):
@@ -276,13 +291,13 @@ class Chat(object):
 
     def establish_connection(self):
         self.connect()
+        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
         self.send_irc_auth()
         success = self.irc.recv(4096)
         logging.debug("Retrieving Initial Messages")
         if success == ":tmi.twitch.tv NOTICE * :Login unsuccessful\r\n":
             logging.error("Oauth failed to login user")
             raise Exception
-        self.irc.sendall("CAP REQ :twitch.tv/tags twitch.tv/commands\r\n")
         self.irc.recv(1024)
         self.join_channel()
         self.set_sender_badges(2)
