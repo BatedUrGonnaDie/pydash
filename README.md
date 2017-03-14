@@ -1,3 +1,5 @@
+#This project is discontinued and will stop working when v3 is removed, see the twitch blog for details
+
 #Setting Up
 Clone the Repo, then follow OS specific instructions.
 #####Windows
